@@ -50,7 +50,7 @@ class HmlDB(object):
         """
         Returns all triples
         """
-        self.cur.execute('SELECT * FROM words')
+        self.cur.execute('SELECT DISTINCT * FROM words')
         return self.cur.fetchall()
     def select_all_lemmaTokenMsd(self):
         """

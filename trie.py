@@ -13,9 +13,9 @@ def read(filename):
         data = pickle.load(f)
     return data
 
-def write(filename, l_ist):
+def write(filename, trie):
     with open(filename, 'wb') as f:
-        pickle.dump(put([{}],l_ist), f, pickle.HIGHEST_PROTOCOL)
+        pickle.dump(trie, f, pickle.HIGHEST_PROTOCOL)
 
 
 def put(trie, words):
@@ -42,12 +42,13 @@ def search(trie, word):
         while(word[j] in current):
             suffix += word[j]
             numberOfEqualLetters += 1
+            currentNoOfWordsPassThrough = current.get(word[j])[1]
             current = current.get(word[j])[0]
             j -= 1
         if(numberOfEqualLetters > 0):
-            print("Trie has suffix for word '"+word+"'. Suffix: '"+suffix+"'.")
+            return [numberOfEqualLetters, currentNoOfWordsPassThrough]
         else:
-            print("Trie doesn't have suffix for word '"+word+"'.")
+            return [] #trie doesn't have suffix
 def printify(trie):
     for k in trie[0]:
         if(((trie[0])[k])[4] == True):
@@ -59,40 +60,55 @@ def printify(trie):
 
 def seperate(trainsize):
     db = HmlDB("..//hml.db")
-    seed = 432
-    noun = [i[0] for i in  HmlDB.select_token_by_msd(db,'N%')]
-    adjective= [i[0] for i in  HmlDB.select_token_by_msd(db,'A%')]
-    verb = [i[0] for i in  HmlDB.select_token_by_msd(db,'V%')]
-    adverb = [i[0] for i in  HmlDB.select_token_by_msd(db,'R%')] #prilog
-    pronoun = [i[0] for i in  HmlDB.select_token_by_msd(db,'P%')] #zamjenica
-    numeral = [i[0] for i in  HmlDB.select_token_by_msd(db,'M%')]
+    seed, triple, br, noun_train, test = 432, {}, 0, [], []
+    adjective_train, verb_train, adverb_train, pronoun_train, numeral_train = [], [], [], [], []
+    allItems = HmlDB.select_all(db)
     random.seed(seed)
-    random.shuffle(noun)
-    noun_train,noun_test = noun[:int(len(noun)*trainsize)], noun[int(len(noun)*trainsize):]
-    random.shuffle(adjective)
-    adjective_train, adjective_test = adjective[:int(len(adjective)*trainsize)], adjective[int(len(adjective)*trainsize):]
-    random.shuffle(verb)
-    verb_train, verb_test = verb[:int(len(verb)*trainsize)], verb[int(len(verb)*trainsize):]
-    random.shuffle(adverb)
-    adverb_train, adverb_test = adverb[:int(len(adverb)*trainsize)], adverb[int(len(adverb)*trainsize):]
-    random.shuffle(pronoun)
-    pronoun_train, pronoun_test = pronoun[:int(len(pronoun)*trainsize)], pronoun[int(len(pronoun)*trainsize):]
-    random.shuffle(numeral)
-    numeral_train, numeral_test = numeral[:int(len(numeral)*trainsize)], numeral[int(len(numeral)*trainsize):]
-    test = noun_test + adjective_test + verb_test + adverb_test + pronoun_test + numeral_test
-    train = noun + adjective + verb + adverb + pronoun + numeral
+    random.shuffle(allItems)
+
+    for item in allItems:
+        if not item[0] in triple:
+            triple[item[0]] = [[item[1],item[2]]]
+        else:
+            triple[item[0]]+=[[item[1],item[2]]]
+    for lemma in triple:
+        br+=len(triple[lemma])
+        if(br>len(allItems)*trainsize):
+            test+=[i[0] for i in triple[lemma]]
+        else:
+            for j in triple[lemma]:
+                if j[1][0] == 'N':
+                    noun_train += [j[0]]
+                if j[1][0] == 'A':
+                    adjective_train += [j[0]]
+                if j[1][0] == 'V':
+                    verb_train += [j[0]]
+                if j[1][0] == 'R':
+                    adverb_train += [j[0]]
+                if j[1][0] == 'P':
+                    pronoun_train += [j[0]]
+                if j[1][0] == 'M':
+                    numeral_train += [j[0]]
     set(test)
-    print("Len Test",len(test))
-    print("Len Train",len(train))
+    set(noun_train)
+    set(adjective_train)
+    set(verb_train)
+    set(adverb_train)
+    set(pronoun_train)
+    set(numeral_train)
     write('../test.pickle',test)
-    write('../trainNounTrie.pickle',noun_train)
-    write('../trainAdjectiveTrie.pickle',adjective_train)
-    write('../trainVerbTrie.pickle',verb_train)
-    write('../trainAdverbTrie.pickle',adverb_train)
-    write('../trainPronounTrie.pickle',pronoun_train)
-    write('../trainNumeralTrie.pickle',numeral_train)
+    write('../trainNounTrie.pickle',put([{}],noun_train))
+    write('../trainAdjectiveTrie.pickle',put([{}],adjective_train))
+    write('../trainVerbTrie.pickle',put([{}],verb_train))
+    write('../trainAdverbTrie.pickle',put([{}],adverb_train))
+    write('../trainPronounTrie.pickle',put([{}],pronoun_train))
+    write('../trainNumeralTrie.pickle',put([{}],numeral_train))
 
-
+def decideFromTrainTries():
+    nounTrainTrie=read('../trainNounTrie.pickle') #dict
+    testTrie=read('../test.pickle') #list
+    nounTrieResult=search(nounTrainTrie,testTrie[0])
+    print(nounTrieResult,testTrie[0])
 
 
 dot = Digraph()
@@ -100,6 +116,8 @@ dot.node('0', 'ROOT')
 dot.format = 'svg'
 trainsize = 0.8
 seperate(trainsize)
+decideFromTrainTries()
+
 
 
 #dot.render("..//trieDot.gv", view=True)
