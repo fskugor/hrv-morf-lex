@@ -44,11 +44,12 @@ def search(trie, word):
             numberOfEqualLetters += 1
             currentNoOfWordsPassThrough = current.get(word[j])[1]
             current = current.get(word[j])[0]
+            if j == 0: break
             j -= 1
-        if(numberOfEqualLetters > 0):
-            return [numberOfEqualLetters, currentNoOfWordsPassThrough]
-        else:
-            return [] #trie doesn't have suffix
+        if(numberOfEqualLetters > 1):
+            return [numberOfEqualLetters, currentNoOfWordsPassThrough]#returns suffix length and number of words
+        else:                                                         #which are containing the same suffix
+            return [0, 0] #trie doesn't have suffix that's long enough for considering
 def printify(trie):
     for k in trie[0]:
         if(((trie[0])[k])[4] == True):
@@ -59,13 +60,15 @@ def printify(trie):
         printify((trie[0])[k])
 
 def seperate(trainsize):
+    print("Enter seperate()")
     db = HmlDB("..//hml.db")
     seed, triple, br, noun_train, test = 432, {}, 0, [], []
     adjective_train, verb_train, adverb_train, pronoun_train, numeral_train = [], [], [], [], []
     allItems = HmlDB.select_all(db)
     random.seed(seed)
     random.shuffle(allItems)
-
+    print("sve rici ",len(allItems))
+    print("trening ", len(allItems)*trainsize)
     for item in allItems:
         if not item[0] in triple:
             triple[item[0]] = [[item[1],item[2]]]
@@ -89,32 +92,108 @@ def seperate(trainsize):
                     pronoun_train += [j[0]]
                 if j[1][0] == 'M':
                     numeral_train += [j[0]]
-    set(test)
-    set(noun_train)
-    set(adjective_train)
-    set(verb_train)
-    set(adverb_train)
-    set(pronoun_train)
-    set(numeral_train)
-    write('../test.pickle',test)
-    write('../trainNounTrie.pickle',put([{}],noun_train))
-    write('../trainAdjectiveTrie.pickle',put([{}],adjective_train))
-    write('../trainVerbTrie.pickle',put([{}],verb_train))
-    write('../trainAdverbTrie.pickle',put([{}],adverb_train))
-    write('../trainPronounTrie.pickle',put([{}],pronoun_train))
-    write('../trainNumeralTrie.pickle',put([{}],numeral_train))
+    hjh=noun_train+adjective_train+verb_train+adverb_train+pronoun_train+numeral_train
+    print("train len",len(set(hjh)))
+    print("test len",len(set(test)))
+    write('../test.pickle', set(test))
+    write('../trainNounTrie.pickle', put([{}], set(noun_train)))
+    write('../trainAdjectiveTrie.pickle', put([{}], set(adjective_train)))
+    write('../trainVerbTrie.pickle', put([{}], set(verb_train)))
+    write('../trainAdverbTrie.pickle', put([{}], set(adverb_train)))
+    write('../trainPronounTrie.pickle', put([{}], set(pronoun_train)))
+    write('../trainNumeralTrie.pickle', put([{}], set(numeral_train)))
+    print("Leaving seperate()")
 
 def decideFromTrainTries():
-    nounTrainTrie=read('../trainNounTrie.pickle') #dict
-    testTrie=read('../test.pickle') #list
-    nounTrieResult=search(nounTrainTrie,testTrie[0])
-    print(nounTrieResult,testTrie[0])
+    db = HmlDB("..//hml.db")
+    print("Enter decideFromTrainTries()")
+    results = {}
+    nounTrainTrie = read('../trainNounTrie.pickle') #dictionaries
+    adjectiveTrainTrie = read('../trainAdjectiveTrie.pickle')
+    verbTrainTrie = read('../trainVerbTrie.pickle')
+    adverbTrainTrie = read('../trainAdverbTrie.pickle')
+    pronounTrainTrie = read('../trainPronounTrie.pickle')
+    numeralTrainTrie = read('../trainNumeralTrie.pickle')
+
+    testTrie = read('../test.pickle') #list
+    #print(nounTrieResult,testTrie[0])
+    for testWord in testTrie:
+        nounResultFromSearchTrie = search(nounTrainTrie, testWord)
+        adjResultFromSearchTrie = search(adjectiveTrainTrie, testWord)
+        verbResultFromSearchTrie = search(verbTrainTrie, testWord)
+        advResultFromSearchTrie = search(adverbTrainTrie, testWord)
+        pronResultFromSearchTrie = search(pronounTrainTrie, testWord)
+        numResultFromSearchTrie = search(numeralTrainTrie, testWord)
+        # print(testWord)
+        # print("nounResultFromSearchTrie: ", nounResultFromSearchTrie)
+        # print("verbResultFromSearchTrie: ", verbResultFromSearchTrie)
+        # print("advResultFromSearchTrie: ", advResultFromSearchTrie)
+        # print("adjResultFromSearchTrie: ", adjResultFromSearchTrie)
+        # print("pronResultFromSearchTrie: ", pronResultFromSearchTrie)
+        # print("numResultFromSearchTrie: ", numResultFromSearchTrie)
+
+        suffixLenghts = [nounResultFromSearchTrie[0], verbResultFromSearchTrie[0], \
+                         advResultFromSearchTrie[0], adjResultFromSearchTrie[0], \
+                         pronResultFromSearchTrie[0], numResultFromSearchTrie[0]]
+        wordsWithEqualSuffix = [nounResultFromSearchTrie[1], verbResultFromSearchTrie[1], \
+                                advResultFromSearchTrie[1], adjResultFromSearchTrie[1], \
+                                pronResultFromSearchTrie[1], numResultFromSearchTrie[1]]
+        maxNoOfWords = max(wordsWithEqualSuffix)
+        maxSuffix = max(suffixLenghts)
+        resultMax1, resultMax2, resultMax12, finalRes = [], [], [], []
+        if maxNoOfWords == nounResultFromSearchTrie[1]: resultMax1 += [['N', suffixLenghts[0], wordsWithEqualSuffix[0]]]
+        if maxNoOfWords == verbResultFromSearchTrie[1]: resultMax1 += [['V', suffixLenghts[1], wordsWithEqualSuffix[1]]]
+        if maxNoOfWords == adjResultFromSearchTrie[1]: resultMax1 += [['A', suffixLenghts[3], wordsWithEqualSuffix[3]]]
+        if maxNoOfWords == numResultFromSearchTrie[1]: resultMax1 += [['M', suffixLenghts[5], wordsWithEqualSuffix[5]]]
+        if maxNoOfWords == pronResultFromSearchTrie[1]: resultMax1 += [['P', suffixLenghts[4], wordsWithEqualSuffix[4]]]
+        if maxNoOfWords == advResultFromSearchTrie[1]: resultMax1 += [['R', suffixLenghts[2], wordsWithEqualSuffix[2]]]
+
+        if maxSuffix == nounResultFromSearchTrie[0]: resultMax2 += [['N', suffixLenghts[0], wordsWithEqualSuffix[0]]]
+        if maxSuffix == verbResultFromSearchTrie[0]: resultMax2 += [['V', suffixLenghts[1], wordsWithEqualSuffix[1]]]
+        if maxSuffix == adjResultFromSearchTrie[0]: resultMax2 += [['A', suffixLenghts[3], wordsWithEqualSuffix[3]]]
+        if maxSuffix == numResultFromSearchTrie[0]: resultMax2 += [['M', suffixLenghts[5], wordsWithEqualSuffix[5]]]
+        if maxSuffix == pronResultFromSearchTrie[0]: resultMax2 += [['P', suffixLenghts[4], wordsWithEqualSuffix[4]]]
+        if maxSuffix == advResultFromSearchTrie[0]: resultMax2 += [['R', suffixLenghts[2], wordsWithEqualSuffix[2]]]
+
+        if(resultMax1[0] not in  resultMax2): #if we cannot decide beetwean results, than observe just these two and decide
+            resultMax12 = resultMax1+resultMax2
+            for triple in resultMax12: #(typeOfWord,suffixLen,words with equal suffix) get max suffixLen
+                if(triple[1] == maxSuffix and triple[2] == maxNoOfWords):
+                    finalRes = triple
+                elif triple[1] == maxSuffix:
+                    finalRes = triple
+        else:
+            if len(resultMax1) == 1:
+                finalRes = resultMax1[0]
+            else:
+                if resultMax1[0][1]>resultMax1[1][1]:
+                    finalRes = resultMax1[0]
+                else:
+                    finalRes = resultMax1[1]
+
+        results[testWord]=finalRes
+        # print(resultMax1)
+        # print(resultMax2)
+        # print(resultMax12)
+        # print(finalRes)
+    pogodija = 0
+    falija = 0
+    for key in results:
+        msd= HmlDB.select_by_token(db,key)
+        if msd[0][0] == results[key][0]:
+            pogodija+=1
+        else:
+            falija+=1
+    print("Pogodija: ",pogodija)
+    print("Falija: ", falija)
+
+
 
 
 dot = Digraph()
 dot.node('0', 'ROOT')
 dot.format = 'svg'
-trainsize = 0.8
+trainsize = 0.87
 seperate(trainsize)
 decideFromTrainTries()
 

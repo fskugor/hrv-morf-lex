@@ -97,8 +97,8 @@ class HmlDB(object):
         """
         Returns all triples having given token
         """
-        self.cur.execute('SELECT * FROM words WHERE token LIKE ?', (token, ))
-        return self.cur.fetchall()
+        self.cur.execute('SELECT msd FROM words WHERE token LIKE ?', (token, ))
+        return self.cur.fetchall()[0]
     def select_lemmaTokenMsd_by_token(self, token):
         """
         Returns all triples having given token
