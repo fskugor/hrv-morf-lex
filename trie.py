@@ -4,7 +4,6 @@ from pprint import pprint
 from graphviz import Digraph
 from hmldb import HmlDB
 import random
-from itertools import islice
 import pickle
 
 
@@ -92,9 +91,7 @@ def seperate(trainsize):
                     pronoun_train += [j[0]]
                 if j[1][0] == 'M':
                     numeral_train += [j[0]]
-    hjh=noun_train+adjective_train+verb_train+adverb_train+pronoun_train+numeral_train
-    print("train len",len(set(hjh)))
-    print("test len",len(set(test)))
+
     write('../test.pickle', set(test))
     write('../trainNounTrie.pickle', put([{}], set(noun_train)))
     write('../trainAdjectiveTrie.pickle', put([{}], set(adjective_train)))
@@ -102,19 +99,21 @@ def seperate(trainsize):
     write('../trainAdverbTrie.pickle', put([{}], set(adverb_train)))
     write('../trainPronounTrie.pickle', put([{}], set(pronoun_train)))
     write('../trainNumeralTrie.pickle', put([{}], set(numeral_train)))
+    write('../allTriplesDict.picle',triple)
     print("Leaving seperate()")
 
 def decideFromTrainTries():
     db = HmlDB("..//hml.db")
     print("Enter decideFromTrainTries()")
-    results = {}
     nounTrainTrie = read('../trainNounTrie.pickle') #dictionaries
     adjectiveTrainTrie = read('../trainAdjectiveTrie.pickle')
     verbTrainTrie = read('../trainVerbTrie.pickle')
     adverbTrainTrie = read('../trainAdverbTrie.pickle')
     pronounTrainTrie = read('../trainPronounTrie.pickle')
     numeralTrainTrie = read('../trainNumeralTrie.pickle')
-
+    pogodija = 0
+    falija = 0
+    allTriples=read('../allTriplesDict.picle')
     testTrie = read('../test.pickle') #list
     #print(nounTrieResult,testTrie[0])
     for testWord in testTrie:
@@ -170,20 +169,17 @@ def decideFromTrainTries():
                     finalRes = resultMax1[0]
                 else:
                     finalRes = resultMax1[1]
-
-        results[testWord]=finalRes
-        # print(resultMax1)
-        # print(resultMax2)
-        # print(resultMax12)
-        # print(finalRes)
-    pogodija = 0
-    falija = 0
-    for key in results:
-        msd= HmlDB.select_by_token(db,key)
-        if msd[0][0] == results[key][0]:
-            pogodija+=1
-        else:
-            falija+=1
+        found = False
+        for key in allTriples:
+            for pair in allTriples[key]:
+                if pair[0] == testWord:
+                    found = True
+                    if finalRes[0] == pair[1][0]:
+                        pogodija+=1
+                    else:
+                        falija+=1
+                    break
+            if found: break
     print("Pogodija: ",pogodija)
     print("Falija: ", falija)
 
