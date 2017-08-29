@@ -5,6 +5,7 @@ from graphviz import Digraph
 from hmldb import HmlDB
 import random
 import pickle
+import time
 
 
 def read(filename):
@@ -117,6 +118,7 @@ def decideFromTrainTries():
     testTrie = read('../test.pickle') #list
     #print(nounTrieResult,testTrie[0])
     for testWord in testTrie:
+        msd = HmlDB.select_by_token(db,testWord)
         nounResultFromSearchTrie = search(nounTrainTrie, testWord)
         adjResultFromSearchTrie = search(adjectiveTrainTrie, testWord)
         verbResultFromSearchTrie = search(verbTrainTrie, testWord)
@@ -156,7 +158,7 @@ def decideFromTrainTries():
 
         if(resultMax1[0] not in  resultMax2): #if we cannot decide beetwean results, than observe just these two and decide
             resultMax12 = resultMax1+resultMax2
-            for triple in resultMax12: #(typeOfWord,suffixLen,words with equal suffix) get max suffixLen
+            for triple in resultMax12:
                 if(triple[1] == maxSuffix and triple[2] == maxNoOfWords):
                     finalRes = triple
                 elif triple[1] == maxSuffix:
@@ -170,18 +172,13 @@ def decideFromTrainTries():
                 else:
                     finalRes = resultMax1[1]
         found = False
-        for key in allTriples:
-            for pair in allTriples[key]:
-                if pair[0] == testWord:
-                    found = True
-                    if finalRes[0] == pair[1][0]:
-                        pogodija+=1
-                    else:
-                        falija+=1
-                    break
-            if found: break
-    print("Pogodija: ",pogodija)
-    print("Falija: ", falija)
+        if finalRes[0] == msd:
+            pogodija+=1
+        else:
+            falija+=1
+        k="pogodija: "+str(pogodija)+ "\nfalija: "+str(falija)
+        with open('guessOrfail.txt', 'w') as outfile:
+            json.dump(k, outfile)
 
 
 
@@ -191,9 +188,9 @@ dot.node('0', 'ROOT')
 dot.format = 'svg'
 trainsize = 0.87
 seperate(trainsize)
+t=time.time()
 decideFromTrainTries()
-
-
+print(time.time()-t)
 
 #dot.render("..//trieDot.gv", view=True)
 

@@ -98,13 +98,7 @@ class HmlDB(object):
         Returns all triples having given token
         """
         self.cur.execute('SELECT msd FROM words WHERE token LIKE ?', (token, ))
-        return self.cur.fetchall()[0]
-    def select_lemmaTokenMsd_by_token(self, token):
-        """
-        Returns all triples having given token
-        """
-        self.cur.execute('SELECT lemma,token,msd FROM words WHERE token LIKE ?', (token, ))
-        return self.cur.fetchall()[0]
+        return self.cur.fetchall()[0][0][0]
 
     def select_by_tokens(self, tokens, group_by = True):
         """
@@ -161,36 +155,6 @@ class HmlDB(object):
             where = ' AND '.join(where)
             self.cur.execute('SELECT * FROM words WHERE ' + where, params)
         return self.cur.fetchall()
-
-    def insert_tripleTest(self, triple):
-        """
-        Inserts given triples
-        """
-        print(triple)
-        for triple in triples:
-            try:
-                self.cur.execute('INSERT INTO test VALUES (?, ?, ?)', triple)
-            except sqlite3.IntegrityError as err:
-                print(err, triple)
-        self.conn.commit()
-
-    def insert_triplesTrain(self, triples):
-        """
-        Inserts given triples
-        """
-        for triple in triples:
-            try:
-                self.cur.execute('INSERT INTO train VALUES (?, ?, ?)', triples)
-            except sqlite3.IntegrityError as err:
-                print(err, triple)
-        self.conn.commit()
-
-    def delete_by_lemma(self, lemma):
-        """
-        Deletes all triples having given lemma
-        """
-        self.cur.execute('DELETE FROM words WHERE lemma = ?', (lemma, ))
-        self.conn.commit()
 
 
 
