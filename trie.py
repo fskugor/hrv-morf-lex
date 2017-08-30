@@ -37,14 +37,15 @@ def put(trie, words): #this function creates trie from list of words
 def search(trie, word):
         current = trie[0]
         numberOfEqualLetters =  0
+        lenght=len(word)
         j = len(word)-1
-        suffix = ''
         while(word[j] in current):
-            suffix += word[j]
             numberOfEqualLetters += 1
             currentNoOfWordsPassThrough = current.get(word[j])[1]
             current = current.get(word[j])[0]
-            if j == 1: break
+            if lenght == 2:
+                if j == 0: break
+            elif j == 1: break
             j -= 1
         if(numberOfEqualLetters > 1):
             return [numberOfEqualLetters, currentNoOfWordsPassThrough]#returns suffix length and number of words
@@ -116,69 +117,76 @@ def decideFromTrainTries():
     allTriples=read('../allTriplesDict.picle')
     testTrie = read('../test.pickle') #list
     print(len(testTrie))
+    # br=0
     for testWord in testTrie:
-        msd = HmlDB.select_by_token(db,testWord)
-        nounResultFromSearchTrie = search(nounTrainTrie, testWord)
-        adjResultFromSearchTrie = search(adjectiveTrainTrie, testWord)
-        verbResultFromSearchTrie = search(verbTrainTrie, testWord)
-        advResultFromSearchTrie = search(adverbTrainTrie, testWord)
-        pronResultFromSearchTrie = search(pronounTrainTrie, testWord)
-        numResultFromSearchTrie = search(numeralTrainTrie, testWord)
-        #separate result from search method so we can decide which type of word is our test word
-        suffixLenghts = [nounResultFromSearchTrie[0], verbResultFromSearchTrie[0], \
-                         advResultFromSearchTrie[0], adjResultFromSearchTrie[0], \
-                         pronResultFromSearchTrie[0], numResultFromSearchTrie[0]]
-        wordsWithEqualSuffix = [nounResultFromSearchTrie[1], verbResultFromSearchTrie[1], \
-                                advResultFromSearchTrie[1], adjResultFromSearchTrie[1], \
-                                pronResultFromSearchTrie[1], numResultFromSearchTrie[1]]
-        maxNoOfWords = max(wordsWithEqualSuffix)
-        maxSuffix = max(suffixLenghts)
-        resultMax1, resultMax2, resultMax12, finalRes = [], [], [], []
-        if maxNoOfWords == nounResultFromSearchTrie[1]: resultMax1 += [['N', suffixLenghts[0], wordsWithEqualSuffix[0]]]
-        if maxNoOfWords == verbResultFromSearchTrie[1]: resultMax1 += [['V', suffixLenghts[1], wordsWithEqualSuffix[1]]]
-        if maxNoOfWords == adjResultFromSearchTrie[1]: resultMax1 += [['A', suffixLenghts[3], wordsWithEqualSuffix[3]]]
-        if maxNoOfWords == numResultFromSearchTrie[1]: resultMax1 += [['M', suffixLenghts[5], wordsWithEqualSuffix[5]]]
-        if maxNoOfWords == pronResultFromSearchTrie[1]: resultMax1 += [['P', suffixLenghts[4], wordsWithEqualSuffix[4]]]
-        if maxNoOfWords == advResultFromSearchTrie[1]: resultMax1 += [['R', suffixLenghts[2], wordsWithEqualSuffix[2]]]
-        #find max suffix(N,V,A,M,P or R) and max number of words passing through this suffix
-        if maxSuffix == nounResultFromSearchTrie[0]: resultMax2 += [['N', suffixLenghts[0], wordsWithEqualSuffix[0]]]
-        if maxSuffix == verbResultFromSearchTrie[0]: resultMax2 += [['V', suffixLenghts[1], wordsWithEqualSuffix[1]]]
-        if maxSuffix == adjResultFromSearchTrie[0]: resultMax2 += [['A', suffixLenghts[3], wordsWithEqualSuffix[3]]]
-        if maxSuffix == numResultFromSearchTrie[0]: resultMax2 += [['M', suffixLenghts[5], wordsWithEqualSuffix[5]]]
-        if maxSuffix == pronResultFromSearchTrie[0]: resultMax2 += [['P', suffixLenghts[4], wordsWithEqualSuffix[4]]]
-        if maxSuffix == advResultFromSearchTrie[0]: resultMax2 += [['R', suffixLenghts[2], wordsWithEqualSuffix[2]]]
+        # br+=1
+        # if br==101: break
+        if len(testWord) > 1:
+            msd = HmlDB.select_by_token(db,testWord)
+            nounResultFromSearchTrie = search(nounTrainTrie, testWord)
+            adjResultFromSearchTrie = search(adjectiveTrainTrie, testWord)
+            verbResultFromSearchTrie = search(verbTrainTrie, testWord)
+            advResultFromSearchTrie = search(adverbTrainTrie, testWord)
+            pronResultFromSearchTrie = search(pronounTrainTrie, testWord)
+            numResultFromSearchTrie = search(numeralTrainTrie, testWord)
+            #separate result from search method so we can decide which type of word is our test word
+            suffixLenghts = [nounResultFromSearchTrie[0], verbResultFromSearchTrie[0], \
+                             advResultFromSearchTrie[0], adjResultFromSearchTrie[0], \
+                             pronResultFromSearchTrie[0], numResultFromSearchTrie[0]]
+            wordsWithEqualSuffix = [nounResultFromSearchTrie[1], verbResultFromSearchTrie[1], \
+                                    advResultFromSearchTrie[1], adjResultFromSearchTrie[1], \
+                                    pronResultFromSearchTrie[1], numResultFromSearchTrie[1]]
+            maxNoOfWords = max(wordsWithEqualSuffix)
+            maxSuffix = max(suffixLenghts)
+            resultMax1, resultMax2, resultMax12, finalRes = [], [], [], []
+            if maxNoOfWords == nounResultFromSearchTrie[1]: resultMax1 += [['N', suffixLenghts[0], wordsWithEqualSuffix[0]]]
+            if maxNoOfWords == verbResultFromSearchTrie[1]: resultMax1 += [['V', suffixLenghts[1], wordsWithEqualSuffix[1]]]
+            if maxNoOfWords == adjResultFromSearchTrie[1]: resultMax1 += [['A', suffixLenghts[3], wordsWithEqualSuffix[3]]]
+            if maxNoOfWords == numResultFromSearchTrie[1]: resultMax1 += [['M', suffixLenghts[5], wordsWithEqualSuffix[5]]]
+            if maxNoOfWords == pronResultFromSearchTrie[1]: resultMax1 += [['P', suffixLenghts[4], wordsWithEqualSuffix[4]]]
+            if maxNoOfWords == advResultFromSearchTrie[1]: resultMax1 += [['R', suffixLenghts[2], wordsWithEqualSuffix[2]]]
+            #find max suffix(N,V,A,M,P or R) and max number of words passing through this suffix
+            if maxSuffix == nounResultFromSearchTrie[0]: resultMax2 += [['N', suffixLenghts[0], wordsWithEqualSuffix[0]]]
+            if maxSuffix == verbResultFromSearchTrie[0]: resultMax2 += [['V', suffixLenghts[1], wordsWithEqualSuffix[1]]]
+            if maxSuffix == adjResultFromSearchTrie[0]: resultMax2 += [['A', suffixLenghts[3], wordsWithEqualSuffix[3]]]
+            if maxSuffix == numResultFromSearchTrie[0]: resultMax2 += [['M', suffixLenghts[5], wordsWithEqualSuffix[5]]]
+            if maxSuffix == pronResultFromSearchTrie[0]: resultMax2 += [['P', suffixLenghts[4], wordsWithEqualSuffix[4]]]
+            if maxSuffix == advResultFromSearchTrie[0]: resultMax2 += [['R', suffixLenghts[2], wordsWithEqualSuffix[2]]]
 
-        resultMax12=resultMax1+resultMax2
-        for triple in resultMax12:
-            if triple[1]==maxSuffix and triple[2]==maxNoOfWords:
-                finalRes=[triple]
-                break
-            elif triple[1]==(maxSuffix-1):
-                finalRes+=[triple]
-            elif triple[1]==maxSuffix:
-                finalRes+=[triple]
-        if len(finalRes)>1:
-            for i in range(len(finalRes)-1):
-                for j in range(i+1,len(finalRes),1):
-                    if finalRes[i][2]>finalRes[j][2]:
-                        tempRes=finalRes[i]
+            resultMax12=resultMax1+resultMax2
+            found=False
+            for i in range(len(resultMax12)-1):
+                for j in range(len(resultMax12)):
+                    if resultMax12[i]!=resultMax12[j]:
+                        if resultMax12[i][1]==maxSuffix and resultMax12[i][2]==maxNoOfWords:
+                            finalRes=resultMax12[i]
+                            found=True
+                            break
+                        if resultMax12[i][1]>=resultMax12[j][1] and resultMax12[i][2]>1:
+                            finalRes=resultMax12[i]
+                        elif resultMax12[i][1]<=resultMax12[j][1] and resultMax12[j][2]>1:
+                            finalRes=resultMax12[j]
+                        else:
+                            if resultMax12[i][1]==maxSuffix:
+                                finalRes=resultMax12[i]
+                            elif resultMax12[j][1]==maxSuffix:
+                                finalRes=resultMax12[j]
                     else:
-                        tempRes=finalRes[j]
-            finalRes=tempRes
-        else:
-            finalRes=finalRes[0]
-        # print(testWord)
-        # print(resultMax12)
-        # print(finalRes)
-        if finalRes[0] == msd:
-            pogodija+=1
-            # print("YES")
-        else:
-            falija+=1
-            # print("NO")
-        k="pogodija: "+str(pogodija)+ "\nfalija: "+str(falija)
-        with open('guessOrfail.txt', 'w') as outfile:
-            json.dump(k, outfile)
+                        finalRes=resultMax12[i]
+                if found: break
+
+            # print(testWord)
+            # print(resultMax12)
+            # print(finalRes)
+            if finalRes[0] == msd:
+                pogodija+=1
+                # print("YES")
+            else:
+                falija+=1
+                # print("NO")
+            k="pogodija: "+str(pogodija)+ "\nfalija: "+str(falija)
+            with open('guessOrfail.txt', 'w') as outfile:
+                json.dump(k, outfile)
 
 
 
