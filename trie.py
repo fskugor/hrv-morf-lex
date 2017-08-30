@@ -115,6 +115,7 @@ def decideFromTrainTries():
     falija = 0
     allTriples=read('../allTriplesDict.picle')
     testTrie = read('../test.pickle') #list
+    print(len(testTrie))
     for testWord in testTrie:
         msd = HmlDB.select_by_token(db,testWord)
         nounResultFromSearchTrie = search(nounTrainTrie, testWord)
@@ -152,6 +153,8 @@ def decideFromTrainTries():
             if triple[1]==maxSuffix and triple[2]==maxNoOfWords:
                 finalRes=[triple]
                 break
+            elif triple[1]==(maxSuffix-1):
+                finalRes+=[triple]
             elif triple[1]==maxSuffix:
                 finalRes+=[triple]
         if len(finalRes)>1:
@@ -164,10 +167,15 @@ def decideFromTrainTries():
             finalRes=tempRes
         else:
             finalRes=finalRes[0]
+        # print(testWord)
+        # print(resultMax12)
+        # print(finalRes)
         if finalRes[0] == msd:
             pogodija+=1
+            # print("YES")
         else:
             falija+=1
+            # print("NO")
         k="pogodija: "+str(pogodija)+ "\nfalija: "+str(falija)
         with open('guessOrfail.txt', 'w') as outfile:
             json.dump(k, outfile)
