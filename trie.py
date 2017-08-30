@@ -178,7 +178,7 @@ def decideFromTrainTries():
 dot = Digraph()
 dot.node('0', 'ROOT')
 dot.format = 'svg'
-trainsize = 0.87
+trainsize = 0.9
 separate(trainsize)
 t=time.time()
 decideFromTrainTries()
