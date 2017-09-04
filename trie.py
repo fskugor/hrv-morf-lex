@@ -20,37 +20,42 @@ def write(filename, trie):
 
 def put(trie, words): #this function creates trie from list of words
     id = 0
-    for word in words:
-        current = trie[0] # [0] we set current position in trie as [0] because we are starting from root
-        numberOfEqualLetters = 0
-        for j in range(len(word)-1, -1, -1): # every letter is node, reverse order
-            if word[j] in current:
-                numberOfEqualLetters += 1
-                if((numberOfEqualLetters == len(word)) and current[word[j]][2] == True):
-                    break
-                current[word[j]][1] += 1
-            else:
-                id = id+1
-            current = current.setdefault(word[j], [{},1, j == 0, id, j == (len(word)-1)])[0]#key is letter,
+    for key in words:
+        wordsList=[i[0] for i in words[key]]
+        wordsSet=set(wordsList) #avoid adding duplicate words
+        for word in wordsSet:# word is pair:token,msd, we need only token
+            current = trie[0] # [0] we set current position in trie as [0] because we are starting from root
+            for j in range(len(word)-1, -1, -1): # every letter is node, reverse order
+                if word[j] in current:
+                    current[word[j]][1] += 1
+                else:
+                    id = id+1
+                if j == 0:
+                    current = current.setdefault(word[j], [{},1, j == 0, id, j == (len(word)-1)])[0]#key is letter,
+                else:
+                    current = current.setdefault(word[j], [{},1, j == 0, id, j == (len(word)-1)])[0]
     return trie # values are empty dict(for storing next letter of word), number of other words containing that
                 # node(letter), info if the node is first letter of word, id for visualization, if it's last letter(used for visualization)
 def search(trie, word):
         current = trie[0]
-        numberOfEqualLetters =  0
         lenght=len(word)
         j = len(word)-1
+        subword=''
+        suffix=''
+        currentNoOfWordsPassThrough=0
+        subwrd = False
         while(word[j] in current):
-            numberOfEqualLetters += 1
+            suffix+=word[j]
+            if current.get(word[j])[2]:
+                subword = suffix[::-1]
+                subwrd = True
             currentNoOfWordsPassThrough = current.get(word[j])[1]
             current = current.get(word[j])[0]
-            if lenght == 2:
-                if j == 0: break
-            elif j == 1: break
+            if j == 1: break
             j -= 1
-        if(numberOfEqualLetters > 1):
-            return [numberOfEqualLetters, currentNoOfWordsPassThrough]#returns suffix length and number of words
-        else:                                                         #which are containing the same suffix
-            return [0, 0] #trie doesn't have suffix that's long enough for considering
+        if subwrd:
+            return [subword,currentNoOfWordsPassThrough,subwrd]
+        return [suffix[::-1],currentNoOfWordsPassThrough,subwrd]# returns either suffix or subword(if exists)
 def printify(trie):
     for k in trie[0]: #recursive function for adding nodes and connect them to edges for visualization to .dot file
         if(((trie[0])[k])[4] == True):
@@ -58,13 +63,13 @@ def printify(trie):
         dot.node(str(((trie[0])[k])[3]), k+' |'+str(((trie[0])[k])[1])+'| '+str(((trie[0])[k])[2]))#describe node
         for j in ((trie[0])[k])[0]:
             dot.edge(str(((trie[0])[k])[3]),str(((((trie[0])[k])[0])[j])[3])) #connect node with next node
-        printify((trie[0])[k]) #go deeper, for to the end of word
+        printify((trie[0])[k])
 
 def separate(trainsize):
     print("Enter separate()")
-    db = HmlDB("..//hml.db")
-    seed, triple, br, noun_train, test = 4, {}, 0, [], []
-    adjective_train, verb_train, adverb_train, pronoun_train, numeral_train = [], [], [], [], []
+    db = HmlDB("../hml.db")
+    seed, triple, br, noun_train, test = 384, {}, 0, {}, {}
+    adjective_train, verb_train, pronoun_train, numeral_train = {}, {}, {}, {}
     allItems = HmlDB.select_all(db) # get all triples from db
     random.seed(seed)
     random.shuffle(allItems)
@@ -77,116 +82,224 @@ def separate(trainsize):
     for lemma in triple:
         br+=len(triple[lemma])
         if(br>len(allItems)*trainsize):
-            test+=[i[0] for i in triple[lemma]]
+            for j in triple[lemma]:
+                if j[1][0] == 'N' or j[1][0] == 'A' or j[1][0] == 'V' or [1][0] == 'P' or j[1][0] == 'M':
+                    if not lemma in test: test[lemma] = [(j[0],j[1])]
+                    else: test[lemma] += [(j[0],j[1])]
         else:
-            for j in triple[lemma]: #separate N trie, A trie ...--->to 6 train tries
+            for j in triple[lemma]:
                 if j[1][0] == 'N':
-                    noun_train += [j[0]]
+                    if not lemma in noun_train: noun_train[lemma] = [(j[0],j[1])]
+                    else: noun_train[lemma] += [(j[0],j[1])]
                 if j[1][0] == 'A':
-                    adjective_train += [j[0]]
+                    if not lemma in adjective_train: adjective_train[lemma] = [(j[0],j[1])]
+                    else: adjective_train[lemma] += [(j[0],j[1])]
                 if j[1][0] == 'V':
-                    verb_train += [j[0]]
-                if j[1][0] == 'R':
-                    adverb_train += [j[0]]
+                    if not lemma in verb_train: verb_train[lemma] = [(j[0],j[1])]
+                    else: verb_train[lemma] += [(j[0],j[1])]
                 if j[1][0] == 'P':
-                    pronoun_train += [j[0]]
+                    if not lemma in pronoun_train: pronoun_train[lemma] = [(j[0],j[1])]
+                    else: pronoun_train[lemma] += [(j[0],j[1])]
                 if j[1][0] == 'M':
-                    numeral_train += [j[0]]
-    testToset=set(test)
-    write('../test.pickle', list(testToset))  # write all to files,
-    write('../trainNounTrie.pickle', put([{}], set(noun_train)))
-    write('../trainAdjectiveTrie.pickle', put([{}], set(adjective_train)))
-    write('../trainVerbTrie.pickle', put([{}], set(verb_train)))
-    write('../trainAdverbTrie.pickle', put([{}], set(adverb_train)))
-    write('../trainPronounTrie.pickle', put([{}], set(pronoun_train)))
-    write('../trainNumeralTrie.pickle', put([{}], set(numeral_train)))
-    write('../allTriplesDict.picle',triple)
+                    if not lemma in numeral_train: numeral_train[lemma] = [(j[0],j[1])]
+                    else: numeral_train[lemma] += [(j[0],j[1])]
+
+    write('../test.pickle', test)  # write all to files,
+    write('../trainNounTrie.pickle', put([{}], noun_train))
+    write('../trainAdjectiveTrie.pickle', put([{}], adjective_train))
+    write('../trainVerbTrie.pickle', put([{}], verb_train))
+    write('../trainPronounTrie.pickle', put([{}], pronoun_train))
+    write('../trainNumeralTrie.pickle', put([{}], numeral_train))
+    write('../trainNounDictionary.picle',noun_train)
+    write('../trainAdjectiveDictionary.picle',adjective_train)
+    write('../trainVerbDictionary.picle',verb_train)
+    write('../trainPronounDictionary.picle',pronoun_train)
+    write('../trainNumeralDictionary.picle',numeral_train)
     print("Leaving separate()")
+def classifySubword(resultFromSearchTrie, trainDict, testWord, testPairs):
+    found, lemma, token = False, '', ''
+    pairs_train = lambda lemma: trainDict[lemma] if lemma else []
+    for i in trainDict:
+        for j in trainDict[i]:
+            if j[0] == resultFromSearchTrie:
+                lemma = i  # lemma tj oblikX koji je najsličniji našem obliku(tokenu=lemma) tj riječi koju testiramo
+                token = j[0]
+                found=True
+                break
+        if found: break
+
+    guessed=False
+
+    if pairs_train(lemma):
+        print("Lemma za generiranje testnog prikaza: ",lemma)
+        print("\nTrain token: ",token)
+        print("\nTestni token: ",testWord)
+        testModel, testModelOrigin = [], []
+        pairs = pairs_train(lemma)
+        suffix = len(resultFromSearchTrie)
+        preffixTrain = token
+        preffixTest = testWord[:-suffix]
+        print(preffixTrain)
+        print(preffixTest)
+        for i in pairs: #zamijenimo svaki prefix od treninga sa našim od testa
+            testModel += [(preffixTest.lower()+i[0],i[1][0])]
+        for j in testPairs:
+            testModelOrigin +=[(j[0].lower(),j[1][0])]
+        testModelOrigin.sort()
+        testModel.sort()
+        print("Original test model: ",testModelOrigin)
+        print("Generated test model: ",testModel)
+        if testModelOrigin == testModel:
+            guessed = True
+            print("Test model found: ",testModel)
+        else: print("Test model not found")
+    else: return False
+    return guessed
+
+
+def classifySuffix(resultFromSearchTrie, trainDict, testWord, testPairs):
+    found, lemma, token = False, '', ''
+    pairs_train = lambda lemma: trainDict[lemma] if lemma else []
+    if resultFromSearchTrie: #ako postoji suffix od testWOrd u treningu nađi lemmu od tog oblika
+        for i in trainDict:
+            for j in trainDict[i]:
+                if j[0][-len(resultFromSearchTrie):] == resultFromSearchTrie:
+                    lemma = i  # lemma tj oblikX koji je najsličniji našem obliku(tokenu=lemma) tj riječi koju testiramo
+                    token = j[0]
+                    found=True
+                    break
+            if found: break
+
+    guessed=False
+
+    if pairs_train(lemma):
+        print("Lemma za generiranje testnog prikaza: ",lemma)
+        print("\nTrain token: ",token)
+        print("\nTestni token: ",testWord)
+        lemmaEqSuffix = False
+        testModel, testModelOrigin = [], []
+        pairs = pairs_train(lemma)
+        suffix = len(resultFromSearchTrie)
+        if token == resultFromSearchTrie:
+            preffixTrain = token[-suffix:]
+            lemmaEqSuffix = True
+        else: preffixTrain = token[:-suffix]
+        preffixTest = testWord[:-suffix]
+        print(preffixTrain)
+        print(preffixTest)
+        for i in pairs: #zamijenimo svaki prefix od treninga sa našim od testa
+            if lemmaEqSuffix:
+                testModel += [(preffixTest.lower()+i[0],i[1][0])]
+            else:
+                testModel += [(preffixTest.lower()+i[0][len(preffixTrain):].lower(),i[1][0])]
+        for j in testPairs:
+            testModelOrigin +=[(j[0].lower(),j[1][0])]
+        testModelOrigin.sort()
+        testModel.sort()
+        print("Original test model: ",testModelOrigin)
+        print("Generated test model: ",testModel)
+        if testModelOrigin == testModel:
+            guessed = True
+            print("Test model found: ",testModel)
+        else: print("Test model not found")
+    else: return False
+    return guessed
 
 def decideFromTrainTries():
     db = HmlDB("..//hml.db")
     print("Enter decideFromTrainTries()")
-    nounTrainTrie = read('../trainNounTrie.pickle') #dictionaries
+    nounTrainTrie = read('../trainNounTrie.pickle') #nested dictionaries -->tries
     adjectiveTrainTrie = read('../trainAdjectiveTrie.pickle')
     verbTrainTrie = read('../trainVerbTrie.pickle')
     adverbTrainTrie = read('../trainAdverbTrie.pickle')
     pronounTrainTrie = read('../trainPronounTrie.pickle')
     numeralTrainTrie = read('../trainNumeralTrie.pickle')
-    pogodija = 0
-    falija = 0
-    allTriples=read('../allTriplesDict.picle')
-    testTrie = read('../test.pickle') #list
-    print(len(testTrie))
-    # br=0
-    for testWord in testTrie:
-        # br+=1
-        # if br==101: break
-        if len(testWord) > 1:
-            msd = HmlDB.select_by_token(db,testWord)
-            nounResultFromSearchTrie = search(nounTrainTrie, testWord)
-            adjResultFromSearchTrie = search(adjectiveTrainTrie, testWord)
-            verbResultFromSearchTrie = search(verbTrainTrie, testWord)
-            advResultFromSearchTrie = search(adverbTrainTrie, testWord)
-            pronResultFromSearchTrie = search(pronounTrainTrie, testWord)
-            numResultFromSearchTrie = search(numeralTrainTrie, testWord)
-            #separate result from search method so we can decide which type of word is our test word
-            suffixLenghts = [nounResultFromSearchTrie[0], verbResultFromSearchTrie[0], \
-                             advResultFromSearchTrie[0], adjResultFromSearchTrie[0], \
-                             pronResultFromSearchTrie[0], numResultFromSearchTrie[0]]
-            wordsWithEqualSuffix = [nounResultFromSearchTrie[1], verbResultFromSearchTrie[1], \
-                                    advResultFromSearchTrie[1], adjResultFromSearchTrie[1], \
-                                    pronResultFromSearchTrie[1], numResultFromSearchTrie[1]]
-            maxNoOfWords = max(wordsWithEqualSuffix)
-            maxSuffix = max(suffixLenghts)
-            resultMax1, resultMax2, resultMax12, finalRes = [], [], [], []
-            if maxNoOfWords == nounResultFromSearchTrie[1]: resultMax1 += [['N', suffixLenghts[0], wordsWithEqualSuffix[0]]]
-            if maxNoOfWords == verbResultFromSearchTrie[1]: resultMax1 += [['V', suffixLenghts[1], wordsWithEqualSuffix[1]]]
-            if maxNoOfWords == adjResultFromSearchTrie[1]: resultMax1 += [['A', suffixLenghts[3], wordsWithEqualSuffix[3]]]
-            if maxNoOfWords == numResultFromSearchTrie[1]: resultMax1 += [['M', suffixLenghts[5], wordsWithEqualSuffix[5]]]
-            if maxNoOfWords == pronResultFromSearchTrie[1]: resultMax1 += [['P', suffixLenghts[4], wordsWithEqualSuffix[4]]]
-            if maxNoOfWords == advResultFromSearchTrie[1]: resultMax1 += [['R', suffixLenghts[2], wordsWithEqualSuffix[2]]]
-            #find max suffix(N,V,A,M,P or R) and max number of words passing through this suffix
-            if maxSuffix == nounResultFromSearchTrie[0]: resultMax2 += [['N', suffixLenghts[0], wordsWithEqualSuffix[0]]]
-            if maxSuffix == verbResultFromSearchTrie[0]: resultMax2 += [['V', suffixLenghts[1], wordsWithEqualSuffix[1]]]
-            if maxSuffix == adjResultFromSearchTrie[0]: resultMax2 += [['A', suffixLenghts[3], wordsWithEqualSuffix[3]]]
-            if maxSuffix == numResultFromSearchTrie[0]: resultMax2 += [['M', suffixLenghts[5], wordsWithEqualSuffix[5]]]
-            if maxSuffix == pronResultFromSearchTrie[0]: resultMax2 += [['P', suffixLenghts[4], wordsWithEqualSuffix[4]]]
-            if maxSuffix == advResultFromSearchTrie[0]: resultMax2 += [['R', suffixLenghts[2], wordsWithEqualSuffix[2]]]
+    noun_train = read('../trainNounDictionary.picle') #dictionaries
+    adjective_train = read('../trainAdjectiveDictionary.picle')
+    verb_train = read('../trainVerbDictionary.picle')
+    pronoun_train = read('../trainPronounDictionary.picle')
+    numeral_train = read('../trainNumeralDictionary.picle')
+    pogodija, falija = 0, 0
+    testDict = read('../test.pickle') #list
+    for key in testDict: # prolazimo kroz svaki prikaz i uzmemo oblik(token=lemma) za testiranje
+        # for j in testDict[key]:
+        #     if j[0]==key:
+        #         testWord=key
+        #         break
+        # print("Testna riječ: ",testWord)
+        testWord=testDict[key][0][0] #oblik koji nije nužno jednak lemmi
+        nounResultFromSearchTrie = search(nounTrainTrie, testWord)
+        adjResultFromSearchTrie = search(adjectiveTrainTrie, testWord)
+        verbResultFromSearchTrie = search(verbTrainTrie, testWord)
+        pronResultFromSearchTrie = search(pronounTrainTrie, testWord)
+        numResultFromSearchTrie = search(numeralTrainTrie, testWord)
+        found = False
+        if nounResultFromSearchTrie[2]: #True if subword, else suffix
+            print("Subword from noun trie: ",nounResultFromSearchTrie)
+            if classifySubword(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key]):
+                found = True
+        else:
+            print("Suffix from noun trie: ",nounResultFromSearchTrie)
+            nounClassify = classifySuffix(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
+            if nounClassify:
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                found = True
 
-            resultMax12=resultMax1+resultMax2
-            found=False
-            for i in range(len(resultMax12)-1):
-                for j in range(len(resultMax12)):
-                    if resultMax12[i]!=resultMax12[j]:
-                        if resultMax12[i][1]==maxSuffix and resultMax12[i][2]==maxNoOfWords:
-                            finalRes=resultMax12[i]
-                            found=True
-                            break
-                        if resultMax12[i][1]>=resultMax12[j][1] and resultMax12[i][2]>1:
-                            finalRes=resultMax12[i]
-                        elif resultMax12[i][1]<=resultMax12[j][1] and resultMax12[j][2]>1:
-                            finalRes=resultMax12[j]
-                        else:
-                            if resultMax12[i][1]==maxSuffix:
-                                finalRes=resultMax12[i]
-                            elif resultMax12[j][1]==maxSuffix:
-                                finalRes=resultMax12[j]
-                    else:
-                        finalRes=resultMax12[i]
-                if found: break
+        if adjResultFromSearchTrie[2] and not found:
+            print("Subword from adjective trie: ",adjResultFromSearchTrie)
+            if classifySubword(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key]):
+                found = True
+        else:
+            if not found:
+                print("Suffix from adjective trie: ",adjResultFromSearchTrie)
+                adjClassify = classifySuffix(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
+                if adjClassify and not nounClassify:
+                    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                    found = True
 
-            # print(testWord)
-            # print(resultMax12)
-            # print(finalRes)
-            if finalRes[0] == msd:
-                pogodija+=1
-                # print("YES")
-            else:
-                falija+=1
-                # print("NO")
-            k="pogodija: "+str(pogodija)+ "\nfalija: "+str(falija)
-            with open('guessOrfail.txt', 'w') as outfile:
-                json.dump(k, outfile)
+
+        if verbResultFromSearchTrie[2] and not found:
+            print("Subword from verb trie: ",verbResultFromSearchTrie)
+            if classifySubword(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key]):
+                found = True
+        else:
+            if not found:
+                print("Suffix from verb trie: ",verbResultFromSearchTrie)
+                verbClassify = classifySuffix(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
+                if verbClassify and not adjClassify and not nounClassify:
+                    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                    found = True
+
+        if pronResultFromSearchTrie[2] and not found:
+            print("Subword from pronoun trie: ",pronResultFromSearchTrie)
+            if classifySubword(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key]):
+                found = True
+        else:
+            if not found:
+                print("Suffix from pronoun trie: ",pronResultFromSearchTrie)
+                pronClassify = classifySuffix(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
+                if pronClassify and not verbClassify and not adjClassify and not nounClassify:
+                    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                    found = True
+
+        if numResultFromSearchTrie[2] and not found:
+            print("Subword from numeral trie: ",numResultFromSearchTrie)
+            if classifySubword(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key]):
+                found = True
+        else:
+            if not found:
+                print("Suffix from numeral trie: ",numResultFromSearchTrie)
+                numClassify = classifySuffix(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
+                if numClassify and not pronClassify and not verbClassify and not adjClassify and not nounClassify:
+                    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                    found = True
+        if found: pogodija+=1
+        else:
+            falija+=1
+
+        k="pogodija: "+str(pogodija)+ "\nfalija: "+str(falija)
+        with open('guessOrfail.txt', 'w') as outfile:
+            json.dump(k, outfile)
 
 
 
@@ -194,7 +307,7 @@ def decideFromTrainTries():
 dot = Digraph()
 dot.node('0', 'ROOT')
 dot.format = 'svg'
-trainsize = 0.9
+trainsize = 0.98
 separate(trainsize)
 t=time.time()
 decideFromTrainTries()

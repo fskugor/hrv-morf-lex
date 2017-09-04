@@ -159,5 +159,5 @@ class HmlDB(object):
 
 
 if __name__ == '__main__':
-    hmldb = HmlDB('..//hml.db')
+    hmldb = HmlDB('../hml.db')
 
