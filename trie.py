@@ -36,26 +36,50 @@ def put(trie, words): #this function creates trie from list of words
                     current = current.setdefault(word[j], [{},1, j == 0, id, j == (len(word)-1)])[0]
     return trie # values are empty dict(for storing next letter of word), number of other words containing that
                 # node(letter), info if the node is first letter of word, id for visualization, if it's last letter(used for visualization)
+def searchSuperWord(trie,suffix):
+    tempList = []
+    for key in trie:
+        if trie[key][2]:
+            suffix+=key
+            print(suffix[::-1])
+            return suffix[::-1]
+        else:
+            tempList+=[trie[key][1]]
+    print("List of false nodes: ",tempList)
+    if tempList:
+        maxWord=max(tempList)
+        for key in trie:
+            if trie[key][1] == maxWord:
+                print(suffix[::-1])
+                print(key)
+                print(trie)
+                suffix+=key
+                return searchSuperWord(trie.get(key)[0],suffix)
+
+
 def search(trie, word):
         current = trie[0]
         lenght=len(word)
         j = len(word)-1
         subword=''
         suffix=''
+        superword=''
         currentNoOfWordsPassThrough=0
-        subwrd = False
         while(word[j] in current):
+            if j == 0:
+                superword = searchSuperWord(current, suffix)
+                break
             suffix+=word[j]
             if current.get(word[j])[2]:
                 subword = suffix[::-1]
-                subwrd = True
             currentNoOfWordsPassThrough = current.get(word[j])[1]
             current = current.get(word[j])[0]
-            if j == 1: break
             j -= 1
-        if subwrd:
-            return [subword,currentNoOfWordsPassThrough,subwrd]
-        return [suffix[::-1],currentNoOfWordsPassThrough,subwrd]# returns either suffix or subword(if exists)
+        if superword:
+            return [superword,False, True]
+        elif subword:
+            return [subword,True, False]
+        return [suffix[::-1],False, False]# returns either suffix or subword(if exists)
 def printify(trie):
     for k in trie[0]: #recursive function for adding nodes and connect them to edges for visualization to .dot file
         if(((trie[0])[k])[4] == True):
@@ -68,7 +92,7 @@ def printify(trie):
 def separate(trainsize):
     print("Enter separate()")
     db = HmlDB("../hml.db")
-    seed, triple, br, noun_train, test = 384, {}, 0, {}, {}
+    seed, triple, br, noun_train, test = 254, {}, 0, {}, {}
     adjective_train, verb_train, pronoun_train, numeral_train = {}, {}, {}, {}
     allItems = HmlDB.select_all(db) # get all triples from db
     random.seed(seed)
@@ -123,7 +147,6 @@ def classifySubword(resultFromSearchTrie, trainDict, testWord, testPairs):
         for j in trainDict[i]:
             if j[0] == resultFromSearchTrie:
                 lemma = i  # lemma tj oblikX koji je najsličniji našem obliku(tokenu=lemma) tj riječi koju testiramo
-                token = j[0]
                 found=True
                 break
         if found: break
@@ -132,15 +155,12 @@ def classifySubword(resultFromSearchTrie, trainDict, testWord, testPairs):
 
     if pairs_train(lemma):
         print("Lemma za generiranje testnog prikaza: ",lemma)
-        print("\nTrain token: ",token)
+        print("\nTrain token: ",resultFromSearchTrie)
         print("\nTestni token: ",testWord)
         testModel, testModelOrigin = [], []
         pairs = pairs_train(lemma)
-        suffix = len(resultFromSearchTrie)
-        preffixTrain = token
-        preffixTest = testWord[:-suffix]
-        print(preffixTrain)
-        print(preffixTest)
+        subword = len(resultFromSearchTrie)
+        preffixTest = testWord[:-subword]
         for i in pairs: #zamijenimo svaki prefix od treninga sa našim od testa
             testModel += [(preffixTest.lower()+i[0],i[1][0])]
         for j in testPairs:
@@ -156,6 +176,42 @@ def classifySubword(resultFromSearchTrie, trainDict, testWord, testPairs):
     else: return False
     return guessed
 
+def classifySuperword(resultFromSearchTrie, trainDict, testWord, testPairs):
+    found, lemma, token = False, '', ''
+    pairs_train = lambda lemma: trainDict[lemma] if lemma else []
+    for i in trainDict:
+        for j in trainDict[i]:
+            if j[0] == resultFromSearchTrie:
+                lemma = i  # lemma tj oblikX koji je najsličniji našem obliku(tokenu=lemma) tj riječi koju testiramo
+                found=True
+                break
+        if found: break
+
+    guessed=False
+
+    if pairs_train(lemma):
+        print("Lemma za generiranje testnog prikaza: ",lemma)
+        print("\nTrain token: ",token)
+        print("\nTestni token: ",testWord)
+        testModel, testModelOrigin = [], []
+        pairs = pairs_train(lemma)
+        test=len(testWord)
+        preffixTrain = resultFromSearchTrie[:-test]
+        print(preffixTrain)
+        for i in pairs: #zamijenimo svaki prefix od treninga sa našim od testa
+            testModel += [i[0][len(preffixTrain):],i[1][0]]
+        for j in testPairs:
+            testModelOrigin +=[(j[0].lower(),j[1][0])]
+        testModelOrigin.sort()
+        testModel.sort()
+        print("Original test model: ",testModelOrigin)
+        print("Generated test model: ",testModel)
+        if testModelOrigin == testModel:
+            guessed = True
+            print("Test model found: ",testModel)
+        else: print("Test model not found")
+    else: return False
+    return guessed
 
 def classifySuffix(resultFromSearchTrie, trainDict, testWord, testPairs):
     found, lemma, token = False, '', ''
@@ -233,66 +289,95 @@ def decideFromTrainTries():
         verbResultFromSearchTrie = search(verbTrainTrie, testWord)
         pronResultFromSearchTrie = search(pronounTrainTrie, testWord)
         numResultFromSearchTrie = search(numeralTrainTrie, testWord)
+        print(testWord)
+        # print("noun trie: ",nounResultFromSearchTrie)
+        # print("adjective trie: ",adjResultFromSearchTrie)
+        # print("verb trie: ",verbResultFromSearchTrie)
+        # print("pronoun trie: ",pronResultFromSearchTrie)
+        # print("numeral trie: ",numResultFromSearchTrie)
+        # print('\n----------------------------------------------------------------')
         found = False
-        if nounResultFromSearchTrie[2]: #True if subword, else suffix
+        if nounResultFromSearchTrie[1]:
             print("Subword from noun trie: ",nounResultFromSearchTrie)
             if classifySubword(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key]):
                 found = True
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        elif nounResultFromSearchTrie[2]: #True if superword, else suffix
+            print("Superword from noun trie: ",nounResultFromSearchTrie)
+            if classifySuperword(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key]):
+                found = True
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
         else:
             print("Suffix from noun trie: ",nounResultFromSearchTrie)
-            nounClassify = classifySuffix(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
-            if nounClassify:
+            if classifySuffix(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key]):
                 print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
                 found = True
 
-        if adjResultFromSearchTrie[2] and not found:
+        if adjResultFromSearchTrie[1] and not found:
             print("Subword from adjective trie: ",adjResultFromSearchTrie)
             if classifySubword(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key]):
                 found = True
-        else:
-            if not found:
-                print("Suffix from adjective trie: ",adjResultFromSearchTrie)
-                adjClassify = classifySuffix(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
-                if adjClassify and not nounClassify:
-                    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                    found = True
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        elif adjResultFromSearchTrie[2] and not found:
+            print("Superword from adjective trie: ",adjResultFromSearchTrie)
+            if classifySuperword(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key]):
+                found = True
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        elif not found:
+            print("Suffix from adjective trie: ",adjResultFromSearchTrie)
+            if classifySuffix(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key]):
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                found = True
 
 
-        if verbResultFromSearchTrie[2] and not found:
+        if verbResultFromSearchTrie[1] and not found:
             print("Subword from verb trie: ",verbResultFromSearchTrie)
             if classifySubword(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key]):
                 found = True
-        else:
-            if not found:
-                print("Suffix from verb trie: ",verbResultFromSearchTrie)
-                verbClassify = classifySuffix(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
-                if verbClassify and not adjClassify and not nounClassify:
-                    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                    found = True
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        elif verbResultFromSearchTrie[2] and not found:
+            print("Superword from verb trie: ",verbResultFromSearchTrie)
+            if classifySuperword(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key]):
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                found = True
+        elif not found:
+            print("Suffix from verb trie: ",verbResultFromSearchTrie)
+            if classifySuffix(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key]):
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                found = True
 
-        if pronResultFromSearchTrie[2] and not found:
+        if pronResultFromSearchTrie[1] and not found:
             print("Subword from pronoun trie: ",pronResultFromSearchTrie)
             if classifySubword(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key]):
                 found = True
-        else:
-            if not found:
-                print("Suffix from pronoun trie: ",pronResultFromSearchTrie)
-                pronClassify = classifySuffix(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
-                if pronClassify and not verbClassify and not adjClassify and not nounClassify:
-                    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                    found = True
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        if pronResultFromSearchTrie[2] and not found:
+            print("Superword from pronoun trie: ",pronResultFromSearchTrie)
+            if classifySuperword(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key]):
+                found = True
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        elif not found:
+            print("Suffix from pronoun trie: ",pronResultFromSearchTrie)
+            if classifySuffix(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key]):
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                found = True
 
-        if numResultFromSearchTrie[2] and not found:
+
+        if numResultFromSearchTrie[1] and not found:
             print("Subword from numeral trie: ",numResultFromSearchTrie)
             if classifySubword(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key]):
                 found = True
-        else:
-            if not found:
-                print("Suffix from numeral trie: ",numResultFromSearchTrie)
-                numClassify = classifySuffix(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
-                if numClassify and not pronClassify and not verbClassify and not adjClassify and not nounClassify:
-                    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                    found = True
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        if numResultFromSearchTrie[2] and not found:
+            print("Superword from numeral trie: ",numResultFromSearchTrie)
+            if classifySuperword(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key]):
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                found = True
+        elif not found:
+            print("Suffix from numeral trie: ",numResultFromSearchTrie)
+            if classifySuffix(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key]):
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                found = True
         if found: pogodija+=1
         else:
             falija+=1
@@ -307,7 +392,7 @@ def decideFromTrainTries():
 dot = Digraph()
 dot.node('0', 'ROOT')
 dot.format = 'svg'
-trainsize = 0.98
+trainsize = 0.99
 separate(trainsize)
 t=time.time()
 decideFromTrainTries()
