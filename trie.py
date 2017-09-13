@@ -7,6 +7,13 @@ import random
 import pickle
 import time
 
+noun, adj, ver, pron, num = 0, 0, 0, 0, 0
+nounSaidAdj, nounSaidVerb, nounSaidPron, nounSaidNum = 0, 0, 0, 0
+adjSaidNoun, adjSaidVerb, adjSaidPron, adjSaidNum = 0, 0, 0, 0
+verbSaidNoun, verbSaidPron, verbSaidAdj, verbSaidNum = 0, 0, 0, 0
+pronSaidNoun, pronSaidAdj, pronSaidNum, pronSaidVerb = 0, 0, 0, 0
+numSaidNoun, numSaidAdj, numSaidVerb, numSaidPron = 0, 0, 0, 0
+nounSaidUnknown, pronSaidUnknown, adjSaidUnknown, verbSaidUnknown, numSaidUnknown = 0, 0, 0, 0, 0
 
 def read(filename):
     with open(filename, 'rb') as f:
@@ -41,18 +48,13 @@ def searchSuperWord(trie,suffix):
     for key in trie:
         if trie[key][2]:
             suffix+=key
-            print(suffix[::-1])
             return suffix[::-1]
         else:
             tempList+=[trie[key][1]]
-    print("List of false nodes: ",tempList)
     if tempList:
         maxWord=max(tempList)
         for key in trie:
             if trie[key][1] == maxWord:
-                print(suffix[::-1])
-                print(key)
-                print(trie)
                 suffix+=key
                 return searchSuperWord(trie.get(key)[0],suffix)
 
@@ -66,14 +68,14 @@ def search(trie, word):
         superword=''
         currentNoOfWordsPassThrough=0
         while(word[j] in current):
-            if j == 0:
-                superword = searchSuperWord(current, suffix)
-                break
             suffix+=word[j]
-            if current.get(word[j])[2]:
+            if current.get(word[j])[2] and j!=0:
                 subword = suffix[::-1]
             currentNoOfWordsPassThrough = current.get(word[j])[1]
             current = current.get(word[j])[0]
+            if j == 0:
+                superword = searchSuperWord(current, suffix)
+                break
             j -= 1
         if superword:
             return [superword,False, True]
@@ -92,7 +94,7 @@ def printify(trie):
 def separate(trainsize):
     print("Enter separate()")
     db = HmlDB("../hml.db")
-    seed, triple, br, noun_train, test = 254, {}, 0, {}, {}
+    seed, triple, br, noun_train, test = 256, {}, 0, {}, {}
     adjective_train, verb_train, pronoun_train, numeral_train = {}, {}, {}, {}
     allItems = HmlDB.select_all(db) # get all triples from db
     random.seed(seed)
@@ -140,6 +142,79 @@ def separate(trainsize):
     write('../trainPronounDictionary.picle',pronoun_train)
     write('../trainNumeralDictionary.picle',numeral_train)
     print("Leaving separate()")
+
+def compare(original, generated):
+    originalGroupByToken, generatedGroupByToken, br, guessedMsd, generatedKeys, originalKeys = {}, {}, 0, 0, [], []
+    global noun, adj, ver, pron, num
+    global nounSaidAdj, nounSaidVerb, nounSaidPron, nounSaidNum
+    global adjSaidNoun, adjSaidVerb, adjSaidPron, adjSaidNum
+    global verbSaidNoun, verbSaidPron, verbSaidAdj, verbSaidNum
+    global pronSaidNoun, pronSaidAdj, pronSaidNum, pronSaidVerb
+    global numSaidNoun, numSaidAdj, numSaidVerb, numSaidPron
+    global nounSaidUnknown, pronSaidUnknown, adjSaidUnknown, verbSaidUnknown, numSaidUnknown
+    for pair in original:
+        if not pair[0] in originalGroupByToken: originalGroupByToken[pair[0]]=[pair[1]]
+        else: originalGroupByToken[pair[0]]+=[pair[1]]
+    for pair in generated:
+        if not pair[0] in generatedGroupByToken: generatedGroupByToken[pair[0]]=[pair[1]]
+        else: generatedGroupByToken[pair[0]]+=[pair[1]]
+    generatedKeys = [key for key in generatedGroupByToken]
+    originalKeys = [key for key in originalGroupByToken]
+    if set(generatedKeys) == set(originalKeys) and original[0][1][0]==generated[0][1][0]:
+        print(generatedGroupByToken)
+        print('++++++++++++++++++++++++++++++++++++++++++++')
+        print(originalGroupByToken)
+        if generated[0][1][0] == 'N': noun+=1
+        elif generated[0][1][0] == 'A': adj+=1
+        elif generated[0][1][0] == 'V': ver+=1
+        elif generated[0][1][0] == 'P': pron+=1
+        elif generated[0][1][0] == 'M': num+=1
+        for key in originalGroupByToken:
+            for msd in originalGroupByToken[key]:
+                if msd in generatedGroupByToken[key]:
+                    br+=1
+                    break
+        guessedMsd=br/len(originalGroupByToken)
+        print("MSD : ", br, len(originalGroupByToken))
+        f = open('msd.txt', 'a')
+        f.write(str(guessedMsd)+'\n')
+        return True
+    elif set(generatedKeys) == set(originalKeys) and original[0][1][0]!=generated[0][1][0]:
+        if original[0][1][0] == 'N':
+            if generated[0][1][0] == 'A': nounSaidAdj+=1
+            elif generated[0][1][0] == 'V': nounSaidVerb+=1
+            elif generated[0][1][0] == 'P': nounSaidPron+=1
+            elif generated[0][1][0] == 'M': nounSaidNum+=1
+        elif original[0][1][0] == 'A':
+            if generated[0][1][0] == 'N': adjSaidNoun+=1
+            elif generated[0][1][0] == 'V': adjSaidVerb+=1
+            elif generated[0][1][0] == 'P': adjSaidPron+=1
+            elif generated[0][1][0] == 'M': adjSaidNum+=1
+        elif original[0][1][0] == 'V':
+            if generated[0][1][0] == 'N': verbSaidNoun+=1
+            elif generated[0][1][0] == 'A': verbSaidAdj+=1
+            elif generated[0][1][0] == 'P': verbSaidPron+=1
+            elif generated[0][1][0] == 'M': verbSaidNum+=1
+        elif original[0][1][0] == 'P':
+            if generated[0][1][0] == 'N': pronSaidNoun+=1
+            elif generated[0][1][0] == 'A': pronSaidAdj+=1
+            elif generated[0][1][0] == 'V': pronSaidVerb+=1
+            elif generated[0][1][0] == 'M': pronSaidNum+=1
+        elif original[0][1][0] == 'M':
+            if generated[0][1][0] == 'N': numSaidNoun+=1
+            elif generated[0][1][0] == 'A': numSaidAdj+=1
+            elif generated[0][1][0] == 'V': numSaidVerb+=1
+            elif generated[0][1][0] == 'P': numSaidPron+=1
+        return False
+    else:
+        if original[0][1][0] == 'N': nounSaidUnknown+=1
+        elif original[0][1][0] == 'A': adjSaidUnknown+=1
+        elif original[0][1][0] == 'V': verbSaidUnknown+=1
+        elif original[0][1][0] == 'P': pronSaidUnknown+=1
+        elif original[0][1][0] == 'M': numSaidUnknown+=1
+        return False
+
+
 def classifySubword(resultFromSearchTrie, trainDict, testWord, testPairs):
     found, lemma, token = False, '', ''
     pairs_train = lambda lemma: trainDict[lemma] if lemma else []
@@ -157,21 +232,19 @@ def classifySubword(resultFromSearchTrie, trainDict, testWord, testPairs):
         print("Lemma za generiranje testnog prikaza: ",lemma)
         print("\nTrain token: ",resultFromSearchTrie)
         print("\nTestni token: ",testWord)
-        testModel, testModelOrigin = [], []
+        generatedTestModel, testModelOrigin = [], []
         pairs = pairs_train(lemma)
         subword = len(resultFromSearchTrie)
-        preffixTest = testWord[:-subword]
-        for i in pairs: #zamijenimo svaki prefix od treninga sa našim od testa
-            testModel += [(preffixTest.lower()+i[0],i[1][0])]
+        if(subword==len(testWord)): classifySuffix(resultFromSearchTrie, trainDict, testWord, testPairs)
+        else:
+            preffixTest = testWord[:-subword]
+            for i in pairs: #zamijenimo svaki prefix od treninga sa našim od testa
+                generatedTestModel += [(preffixTest.lower()+i[0],i[1])]
         for j in testPairs:
-            testModelOrigin +=[(j[0].lower(),j[1][0])]
-        testModelOrigin.sort()
-        testModel.sort()
-        print("Original test model: ",testModelOrigin)
-        print("Generated test model: ",testModel)
-        if testModelOrigin == testModel:
+            testModelOrigin +=[(j[0].lower(),j[1])]
+        if compare(testModelOrigin,generatedTestModel):
             guessed = True
-            print("Test model found: ",testModel)
+            print("Test model found: ",generatedTestModel)
         else: print("Test model not found")
     else: return False
     return guessed
@@ -191,24 +264,20 @@ def classifySuperword(resultFromSearchTrie, trainDict, testWord, testPairs):
 
     if pairs_train(lemma):
         print("Lemma za generiranje testnog prikaza: ",lemma)
-        print("\nTrain token: ",token)
+        print("\nTrain token: ",lemma)
         print("\nTestni token: ",testWord)
-        testModel, testModelOrigin = [], []
+        generatedTestModel, testModelOrigin = [], []
         pairs = pairs_train(lemma)
         test=len(testWord)
         preffixTrain = resultFromSearchTrie[:-test]
         print(preffixTrain)
         for i in pairs: #zamijenimo svaki prefix od treninga sa našim od testa
-            testModel += [i[0][len(preffixTrain):],i[1][0]]
+            generatedTestModel += [(i[0][len(preffixTrain):],i[1])]
         for j in testPairs:
-            testModelOrigin +=[(j[0].lower(),j[1][0])]
-        testModelOrigin.sort()
-        testModel.sort()
-        print("Original test model: ",testModelOrigin)
-        print("Generated test model: ",testModel)
-        if testModelOrigin == testModel:
+            testModelOrigin +=[(j[0].lower(),j[1])]
+        if compare(testModelOrigin,generatedTestModel):
             guessed = True
-            print("Test model found: ",testModel)
+            print("Test model found: ",generatedTestModel)
         else: print("Test model not found")
     else: return False
     return guessed
@@ -233,7 +302,7 @@ def classifySuffix(resultFromSearchTrie, trainDict, testWord, testPairs):
         print("\nTrain token: ",token)
         print("\nTestni token: ",testWord)
         lemmaEqSuffix = False
-        testModel, testModelOrigin = [], []
+        generatedTestModel, testModelOrigin = [], []
         pairs = pairs_train(lemma)
         suffix = len(resultFromSearchTrie)
         if token == resultFromSearchTrie:
@@ -245,18 +314,14 @@ def classifySuffix(resultFromSearchTrie, trainDict, testWord, testPairs):
         print(preffixTest)
         for i in pairs: #zamijenimo svaki prefix od treninga sa našim od testa
             if lemmaEqSuffix:
-                testModel += [(preffixTest.lower()+i[0],i[1][0])]
+                generatedTestModel += [(preffixTest.lower()+i[0],i[1])]
             else:
-                testModel += [(preffixTest.lower()+i[0][len(preffixTrain):].lower(),i[1][0])]
+                generatedTestModel += [(preffixTest.lower()+i[0][len(preffixTrain):].lower(),i[1])]
         for j in testPairs:
-            testModelOrigin +=[(j[0].lower(),j[1][0])]
-        testModelOrigin.sort()
-        testModel.sort()
-        print("Original test model: ",testModelOrigin)
-        print("Generated test model: ",testModel)
-        if testModelOrigin == testModel:
+            testModelOrigin +=[(j[0].lower(),j[1])]
+        if compare(testModelOrigin,generatedTestModel):
             guessed = True
-            print("Test model found: ",testModel)
+            print("Test model found: ",generatedTestModel)
         else: print("Test model not found")
     else: return False
     return guessed
@@ -381,7 +446,6 @@ def decideFromTrainTries():
         if found: pogodija+=1
         else:
             falija+=1
-
         k="pogodija: "+str(pogodija)+ "\nfalija: "+str(falija)
         with open('guessOrfail.txt', 'w') as outfile:
             json.dump(k, outfile)
@@ -392,12 +456,17 @@ def decideFromTrainTries():
 dot = Digraph()
 dot.node('0', 'ROOT')
 dot.format = 'svg'
-trainsize = 0.99
+trainsize = 0.95
 separate(trainsize)
 t=time.time()
 decideFromTrainTries()
 print(time.time()-t)
-
+x='\t\tACTUAL\n\t  _____________________________\n\t\t N     V     A     P     M\n'
+x+='\tP|\n\tR| N     '+str(noun)+'     '+str(verbSaidNoun)+'     '+str(adjSaidNoun)+'     '+str(pronSaidNoun)+'     '+str(numSaidNoun)
+x+='\n\tE|\n\tD| V     '+str(nounSaidVerb)+'     '+str(ver)+'     '+str(adjSaidVerb)+'     '+str(pronSaidVerb)+'     '+str(numSaidVerb)
+x+='\n\tI| \n\tC| A     '+str(nounSaidAdj)+'     '+str(verbSaidAdj)+'     '+str(adj)+'     '+str(pronSaidAdj)+'     '+str(numSaidAdj)
+x+='\n\tT|\n\tI| M     '+str(nounSaidNum)+'     '+str(verbSaidNum)+'     '+str(adjSaidNum)+'     '+str(pronSaidNum)+'     '+str(num)
+x+='\n\tO|\n\tN| P     '+str(nounSaidPron)+'     '+str(verbSaidPron)+'     '+str(adjSaidPron)+'     '+str(pron)+'     '+str(numSaidPron)
+x+='\n\t |\n\t | ?     '+str(nounSaidUnknown)+'     '+str(verbSaidUnknown)+'     '+str(adjSaidUnknown)+'     '+str(pronSaidUnknown)+'     '+str(numSaidUnknown)
+print(x)
 #dot.render("..//trieDot.gv", view=True)
-
-
