@@ -13,7 +13,7 @@ adjSaidNoun, adjSaidVerb, adjSaidPron, adjSaidNum = 0, 0, 0, 0
 verbSaidNoun, verbSaidPron, verbSaidAdj, verbSaidNum = 0, 0, 0, 0
 pronSaidNoun, pronSaidAdj, pronSaidNum, pronSaidVerb = 0, 0, 0, 0
 numSaidNoun, numSaidAdj, numSaidVerb, numSaidPron = 0, 0, 0, 0
-nounSaidUnknown, pronSaidUnknown, adjSaidUnknown, verbSaidUnknown, numSaidUnknown = 0, 0, 0, 0, 0
+nounSaidUnknown, pronSaidUnknown, adjSaidUnknown, verbSaidUnknown, numSaidUnknown, unknown = 0, 0, 0, 0, 0, 0
 
 def read(filename):
     with open(filename, 'rb') as f:
@@ -61,7 +61,6 @@ def searchSuperWord(trie,suffix):
 
 def search(trie, word):
         current = trie[0]
-        lenght=len(word)
         j = len(word)-1
         subword=''
         suffix=''
@@ -92,43 +91,90 @@ def printify(trie):
         printify((trie[0])[k])
 
 def separate(trainsize):
-    print("Enter separate()")
+    #print("Enter separate()")
     db = HmlDB("../hml.db")
-    seed, triple, br, noun_train, test = 256, {}, 0, {}, {}
+    seed, triple, br, noun_train, test = 125, {}, 0, {}, {}
     adjective_train, verb_train, pronoun_train, numeral_train = {}, {}, {}, {}
+    adjective, verb, noun, pronoun, numeral = {}, {}, {}, {}, {}
     allItems = HmlDB.select_all(db) # get all triples from db
     random.seed(seed)
     random.shuffle(allItems)
-
+    nouns_count=HmlDB.count_lemmas(db,"N%")
+    adj_count=HmlDB.count_lemmas(db,"A%")
+    verb_count=HmlDB.count_lemmas(db,"V%")
+    pron_count=HmlDB.count_lemmas(db,"P%")
+    num_count=HmlDB.count_lemmas(db,"M%")
     for item in allItems:
         if not item[0] in triple:
             triple[item[0]] = [[item[1],item[2]]] # add lemma as key, other as value
         else:                                     # for easier separating train from test corpus
             triple[item[0]]+=[[item[1],item[2]]]  # as it cannot be the same lemma in both corpus
     for lemma in triple:
-        br+=len(triple[lemma])
-        if(br>len(allItems)*trainsize):
-            for j in triple[lemma]:
-                if j[1][0] == 'N' or j[1][0] == 'A' or j[1][0] == 'V' or [1][0] == 'P' or j[1][0] == 'M':
-                    if not lemma in test: test[lemma] = [(j[0],j[1])]
-                    else: test[lemma] += [(j[0],j[1])]
-        else:
-            for j in triple[lemma]:
-                if j[1][0] == 'N':
-                    if not lemma in noun_train: noun_train[lemma] = [(j[0],j[1])]
-                    else: noun_train[lemma] += [(j[0],j[1])]
-                if j[1][0] == 'A':
-                    if not lemma in adjective_train: adjective_train[lemma] = [(j[0],j[1])]
-                    else: adjective_train[lemma] += [(j[0],j[1])]
-                if j[1][0] == 'V':
-                    if not lemma in verb_train: verb_train[lemma] = [(j[0],j[1])]
-                    else: verb_train[lemma] += [(j[0],j[1])]
-                if j[1][0] == 'P':
-                    if not lemma in pronoun_train: pronoun_train[lemma] = [(j[0],j[1])]
-                    else: pronoun_train[lemma] += [(j[0],j[1])]
-                if j[1][0] == 'M':
-                    if not lemma in numeral_train: numeral_train[lemma] = [(j[0],j[1])]
-                    else: numeral_train[lemma] += [(j[0],j[1])]
+        for j in triple[lemma]:
+            if j[1][0] == 'N':
+                if not lemma in noun: noun[lemma] = [(j[0],j[1])]
+                else: noun[lemma] += [(j[0],j[1])]
+            if j[1][0] == 'A':
+                if not lemma in adjective: adjective[lemma] = [(j[0],j[1])]
+                else: adjective[lemma] += [(j[0],j[1])]
+            if j[1][0] == 'V':
+                if not lemma in verb: verb[lemma] = [(j[0],j[1])]
+                else: verb[lemma] += [(j[0],j[1])]
+            if j[1][0] == 'P':
+                if not lemma in pronoun: pronoun[lemma] = [(j[0],j[1])]
+                else: pronoun[lemma] += [(j[0],j[1])]
+            if j[1][0] == 'M':
+                if not lemma in numeral: numeral[lemma] = [(j[0],j[1])]
+                else: numeral[lemma] += [(j[0],j[1])]
+    for key in noun:
+        br+=1
+        for j in noun[key]:
+            if br>(nouns_count*trainsize):
+                if not key in test: test[key] = [(j[0],j[1])]
+                else: test[key] += [(j[0],j[1])]
+            else:
+                if not key in noun_train: noun_train[key] = [(j[0],j[1])]
+                else: noun_train[key] += [(j[0],j[1])]
+    br = 0
+    for key in adjective:
+        br+=1
+        for j in adjective[key]:
+            if br>(adj_count*trainsize):
+                if not key in test: test[key] = [(j[0],j[1])]
+                else: test[key] += [(j[0],j[1])]
+            else:
+                if not key in adjective_train: adjective_train[key] = [(j[0],j[1])]
+                else: adjective_train[key] += [(j[0],j[1])]
+    br = 0
+    for key in verb:
+        br+=1
+        for j in verb[key]:
+            if br>(verb_count*trainsize):
+                if not key in test: test[key] = [(j[0],j[1])]
+                else: test[key] += [(j[0],j[1])]
+            else:
+                if not key in verb_train: verb_train[key] = [(j[0],j[1])]
+                else: verb_train[key] += [(j[0],j[1])]
+    br = 0
+    for key in pronoun:
+        br+=1
+        for j in pronoun[key]:
+            if br>(pron_count*0.5):
+                if not key in test: test[key] = [(j[0],j[1])]
+                else: test[key] += [(j[0],j[1])]
+            else:
+                if not key in pronoun_train: pronoun_train[key] = [(j[0],j[1])]
+                else: pronoun_train[key] += [(j[0],j[1])]
+    br = 0
+    for key in numeral:
+        br+=1
+        for j in numeral[key]:
+            if br>(num_count*0.5):
+                if not key in test: test[key] = [(j[0],j[1])]
+                else: test[key] += [(j[0],j[1])]
+            else:
+                if not key in numeral_train: numeral_train[key] = [(j[0],j[1])]
+                else: numeral_train[key] += [(j[0],j[1])]
 
     write('../test.pickle', test)  # write all to files,
     write('../trainNounTrie.pickle', put([{}], noun_train))
@@ -141,17 +187,53 @@ def separate(trainsize):
     write('../trainVerbDictionary.picle',verb_train)
     write('../trainPronounDictionary.picle',pronoun_train)
     write('../trainNumeralDictionary.picle',numeral_train)
-    print("Leaving separate()")
+    #print("Leaving separate()")
 
-def compare(original, generated):
-    originalGroupByToken, generatedGroupByToken, br, guessedMsd, generatedKeys, originalKeys = {}, {}, 0, 0, [], []
-    global noun, adj, ver, pron, num
+def confusionMatrix(fail):
     global nounSaidAdj, nounSaidVerb, nounSaidPron, nounSaidNum
     global adjSaidNoun, adjSaidVerb, adjSaidPron, adjSaidNum
     global verbSaidNoun, verbSaidPron, verbSaidAdj, verbSaidNum
     global pronSaidNoun, pronSaidAdj, pronSaidNum, pronSaidVerb
     global numSaidNoun, numSaidAdj, numSaidVerb, numSaidPron
-    global nounSaidUnknown, pronSaidUnknown, adjSaidUnknown, verbSaidUnknown, numSaidUnknown
+    global nounSaidUnknown, pronSaidUnknown, adjSaidUnknown, verbSaidUnknown, numSaidUnknown, unknown
+    if len(fail)==2: #fail is string, for example NA, N is actual type of test word, A is prediction
+        if fail[0] == 'N':
+            if fail[1] == 'A': nounSaidAdj+=1
+            elif fail[1] == 'V': nounSaidVerb+=1
+            elif fail[1] == 'P': nounSaidPron+=1
+            elif fail[1] == 'M': nounSaidNum+=1
+        elif fail[0] == 'A':
+            if fail[1] == 'N': adjSaidNoun+=1
+            elif fail[1] == 'V': adjSaidVerb+=1
+            elif fail[1] == 'P': adjSaidPron+=1
+            elif fail[1] == 'M': adjSaidNum+=1
+        elif fail[0] == 'V':
+            if fail[1] == 'N': verbSaidNoun+=1
+            elif fail[1] == 'A': verbSaidAdj+=1
+            elif fail[1] == 'P': verbSaidPron+=1
+            elif fail[1] == 'M': verbSaidNum+=1
+        elif fail[0] == 'P':
+            if fail[1] == 'N': pronSaidNoun+=1
+            elif fail[1] == 'A': pronSaidAdj+=1
+            elif fail[1] == 'V': pronSaidVerb+=1
+            elif fail[1] == 'M': pronSaidNum+=1
+        elif fail[0] == 'M':
+            if fail[1] == 'N': numSaidNoun+=1
+            elif fail[1] == 'A': numSaidAdj+=1
+            elif fail[1] == 'V': numSaidVerb+=1
+            elif fail[1] == 'P': numSaidPron+=1
+    else:
+        if fail == '' : unknown+=1
+        elif fail == 'N': nounSaidUnknown+=1
+        elif fail == 'A': adjSaidUnknown+=1
+        elif fail == 'V': verbSaidUnknown+=1
+        elif fail == 'P': pronSaidUnknown+=1
+        elif fail == 'M': numSaidUnknown+=1
+
+def compare(original, generated):
+    originalGroupByToken, generatedGroupByToken, br, guessedMsd, generatedKeys, originalKeys = {}, {}, 0, 0, [], []
+    global noun, adj, ver, pron, num
+
     for pair in original:
         if not pair[0] in originalGroupByToken: originalGroupByToken[pair[0]]=[pair[1]]
         else: originalGroupByToken[pair[0]]+=[pair[1]]
@@ -161,9 +243,9 @@ def compare(original, generated):
     generatedKeys = [key for key in generatedGroupByToken]
     originalKeys = [key for key in originalGroupByToken]
     if set(generatedKeys) == set(originalKeys) and original[0][1][0]==generated[0][1][0]:
-        print(generatedGroupByToken)
-        print('++++++++++++++++++++++++++++++++++++++++++++')
-        print(originalGroupByToken)
+        #print(generatedGroupByToken)
+        #print('++++++++++++++++++++++++++++++++++++++++++++')
+        #print(originalGroupByToken)
         if generated[0][1][0] == 'N': noun+=1
         elif generated[0][1][0] == 'A': adj+=1
         elif generated[0][1][0] == 'V': ver+=1
@@ -175,45 +257,13 @@ def compare(original, generated):
                     br+=1
                     break
         guessedMsd=br/len(originalGroupByToken)
-        print("MSD : ", br, len(originalGroupByToken))
         f = open('msd.txt', 'a')
-        f.write(str(guessedMsd)+'\n')
-        return True
+        f.write(str(guessedMsd)+', '+original[0][1][0]+'\n')
+        return [True]
     elif set(generatedKeys) == set(originalKeys) and original[0][1][0]!=generated[0][1][0]:
-        if original[0][1][0] == 'N':
-            if generated[0][1][0] == 'A': nounSaidAdj+=1
-            elif generated[0][1][0] == 'V': nounSaidVerb+=1
-            elif generated[0][1][0] == 'P': nounSaidPron+=1
-            elif generated[0][1][0] == 'M': nounSaidNum+=1
-        elif original[0][1][0] == 'A':
-            if generated[0][1][0] == 'N': adjSaidNoun+=1
-            elif generated[0][1][0] == 'V': adjSaidVerb+=1
-            elif generated[0][1][0] == 'P': adjSaidPron+=1
-            elif generated[0][1][0] == 'M': adjSaidNum+=1
-        elif original[0][1][0] == 'V':
-            if generated[0][1][0] == 'N': verbSaidNoun+=1
-            elif generated[0][1][0] == 'A': verbSaidAdj+=1
-            elif generated[0][1][0] == 'P': verbSaidPron+=1
-            elif generated[0][1][0] == 'M': verbSaidNum+=1
-        elif original[0][1][0] == 'P':
-            if generated[0][1][0] == 'N': pronSaidNoun+=1
-            elif generated[0][1][0] == 'A': pronSaidAdj+=1
-            elif generated[0][1][0] == 'V': pronSaidVerb+=1
-            elif generated[0][1][0] == 'M': pronSaidNum+=1
-        elif original[0][1][0] == 'M':
-            if generated[0][1][0] == 'N': numSaidNoun+=1
-            elif generated[0][1][0] == 'A': numSaidAdj+=1
-            elif generated[0][1][0] == 'V': numSaidVerb+=1
-            elif generated[0][1][0] == 'P': numSaidPron+=1
-        return False
+        return [False, original[0][1][0], generated[0][1][0]] #for confusion matrix
     else:
-        if original[0][1][0] == 'N': nounSaidUnknown+=1
-        elif original[0][1][0] == 'A': adjSaidUnknown+=1
-        elif original[0][1][0] == 'V': verbSaidUnknown+=1
-        elif original[0][1][0] == 'P': pronSaidUnknown+=1
-        elif original[0][1][0] == 'M': numSaidUnknown+=1
-        return False
-
+        return[False,original[0][1][0]] #also for confusion matrix
 
 def classifySubword(resultFromSearchTrie, trainDict, testWord, testPairs):
     found, lemma, token = False, '', ''
@@ -226,28 +276,29 @@ def classifySubword(resultFromSearchTrie, trainDict, testWord, testPairs):
                 break
         if found: break
 
-    guessed=False
-
     if pairs_train(lemma):
-        print("Lemma za generiranje testnog prikaza: ",lemma)
-        print("\nTrain token: ",resultFromSearchTrie)
-        print("\nTestni token: ",testWord)
+        #print("Lemma za generiranje testnog prikaza: ",lemma)
+        #print("\nTrain token: ",resultFromSearchTrie)
+        #print("\nTestni token: ",testWord)
         generatedTestModel, testModelOrigin = [], []
         pairs = pairs_train(lemma)
         subword = len(resultFromSearchTrie)
-        if(subword==len(testWord)): classifySuffix(resultFromSearchTrie, trainDict, testWord, testPairs)
-        else:
-            preffixTest = testWord[:-subword]
-            for i in pairs: #zamijenimo svaki prefix od treninga sa našim od testa
-                generatedTestModel += [(preffixTest.lower()+i[0],i[1])]
+        preffixTest = testWord[:-subword]
+        for i in pairs: #zamijenimo svaki prefix od treninga sa našim od testa
+            generatedTestModel += [(preffixTest.lower()+i[0],i[1])]
         for j in testPairs:
             testModelOrigin +=[(j[0].lower(),j[1])]
-        if compare(testModelOrigin,generatedTestModel):
-            guessed = True
-            print("Test model found: ",generatedTestModel)
-        else: print("Test model not found")
-    else: return False
-    return guessed
+        result = compare(testModelOrigin,generatedTestModel)
+        if result[0]:
+            return [True]
+            #print("Test model found: ",generatedTestModel)
+        else:
+            if len(result)==3:
+                return [False, result[1], result[2]]
+            else:
+                return [False, result[1]]
+            #print("Test model not found")
+    else: return [False]
 
 def classifySuperword(resultFromSearchTrie, trainDict, testWord, testPairs):
     found, lemma, token = False, '', ''
@@ -260,27 +311,30 @@ def classifySuperword(resultFromSearchTrie, trainDict, testWord, testPairs):
                 break
         if found: break
 
-    guessed=False
-
     if pairs_train(lemma):
-        print("Lemma za generiranje testnog prikaza: ",lemma)
-        print("\nTrain token: ",lemma)
-        print("\nTestni token: ",testWord)
+        #print("Lemma za generiranje testnog prikaza: ",lemma)
+        #print("\nTrain token: ",lemma)
+        #print("\nTestni token: ",testWord)
         generatedTestModel, testModelOrigin = [], []
         pairs = pairs_train(lemma)
         test=len(testWord)
         preffixTrain = resultFromSearchTrie[:-test]
-        print(preffixTrain)
+        #print(preffixTrain)
         for i in pairs: #zamijenimo svaki prefix od treninga sa našim od testa
             generatedTestModel += [(i[0][len(preffixTrain):],i[1])]
         for j in testPairs:
             testModelOrigin +=[(j[0].lower(),j[1])]
-        if compare(testModelOrigin,generatedTestModel):
-            guessed = True
-            print("Test model found: ",generatedTestModel)
-        else: print("Test model not found")
-    else: return False
-    return guessed
+        result = compare(testModelOrigin,generatedTestModel)
+        if result[0]:
+            return [True]
+            #print("Test model found: ",generatedTestModel)
+        else:
+            if len(result)==3:
+                return [False, result[1], result[2]]
+            else:
+                return [False, result[1]]
+            #print("Test model not found")
+    else: return [False]
 
 def classifySuffix(resultFromSearchTrie, trainDict, testWord, testPairs):
     found, lemma, token = False, '', ''
@@ -295,12 +349,10 @@ def classifySuffix(resultFromSearchTrie, trainDict, testWord, testPairs):
                     break
             if found: break
 
-    guessed=False
-
     if pairs_train(lemma):
-        print("Lemma za generiranje testnog prikaza: ",lemma)
-        print("\nTrain token: ",token)
-        print("\nTestni token: ",testWord)
+        #print("Lemma za generiranje testnog prikaza: ",lemma)
+        #print("\nTrain token: ",token)
+        #print("\nTestni token: ",testWord)
         lemmaEqSuffix = False
         generatedTestModel, testModelOrigin = [], []
         pairs = pairs_train(lemma)
@@ -310,8 +362,8 @@ def classifySuffix(resultFromSearchTrie, trainDict, testWord, testPairs):
             lemmaEqSuffix = True
         else: preffixTrain = token[:-suffix]
         preffixTest = testWord[:-suffix]
-        print(preffixTrain)
-        print(preffixTest)
+        #print(preffixTrain)
+        #print(preffixTest)
         for i in pairs: #zamijenimo svaki prefix od treninga sa našim od testa
             if lemmaEqSuffix:
                 generatedTestModel += [(preffixTest.lower()+i[0],i[1])]
@@ -319,16 +371,21 @@ def classifySuffix(resultFromSearchTrie, trainDict, testWord, testPairs):
                 generatedTestModel += [(preffixTest.lower()+i[0][len(preffixTrain):].lower(),i[1])]
         for j in testPairs:
             testModelOrigin +=[(j[0].lower(),j[1])]
-        if compare(testModelOrigin,generatedTestModel):
-            guessed = True
-            print("Test model found: ",generatedTestModel)
-        else: print("Test model not found")
-    else: return False
-    return guessed
+        result = compare(testModelOrigin,generatedTestModel)
+        if result[0]:
+            return [True]
+            #print("Test model found: ",generatedTestModel)
+        else:
+            if len(result)==3:
+                return [False, result[1], result[2]]
+            else:
+                return [False, result[1]]
+            #print("Test model not found")
+    else: return [False]
 
 def decideFromTrainTries():
     db = HmlDB("..//hml.db")
-    print("Enter decideFromTrainTries()")
+    #print("Enter decideFromTrainTries()")
     nounTrainTrie = read('../trainNounTrie.pickle') #nested dictionaries -->tries
     adjectiveTrainTrie = read('../trainAdjectiveTrie.pickle')
     verbTrainTrie = read('../trainVerbTrie.pickle')
@@ -341,111 +398,209 @@ def decideFromTrainTries():
     pronoun_train = read('../trainPronounDictionary.picle')
     numeral_train = read('../trainNumeralDictionary.picle')
     pogodija, falija = 0, 0
+    print("Pridjevi: ",len(adjective_train))
+    print("Zamjenice: ",len(pronoun_train))
+    print("Glagoli: ",len(verb_train))
+    print("Imenice: ",len(noun_train))
+    print("Brojevi: ",len(numeral_train))
     testDict = read('../test.pickle') #list
     for key in testDict: # prolazimo kroz svaki prikaz i uzmemo oblik(token=lemma) za testiranje
-        # for j in testDict[key]:
-        #     if j[0]==key:
-        #         testWord=key
-        #         break
-        # print("Testna riječ: ",testWord)
         testWord=testDict[key][0][0] #oblik koji nije nužno jednak lemmi
         nounResultFromSearchTrie = search(nounTrainTrie, testWord)
         adjResultFromSearchTrie = search(adjectiveTrainTrie, testWord)
         verbResultFromSearchTrie = search(verbTrainTrie, testWord)
         pronResultFromSearchTrie = search(pronounTrainTrie, testWord)
         numResultFromSearchTrie = search(numeralTrainTrie, testWord)
-        print(testWord)
-        # print("noun trie: ",nounResultFromSearchTrie)
-        # print("adjective trie: ",adjResultFromSearchTrie)
-        # print("verb trie: ",verbResultFromSearchTrie)
-        # print("pronoun trie: ",pronResultFromSearchTrie)
-        # print("numeral trie: ",numResultFromSearchTrie)
-        # print('\n----------------------------------------------------------------')
+        #print(testWord)
+
         found = False
+        halfFalse, fullFalse = '', ''
         if nounResultFromSearchTrie[1]:
-            print("Subword from noun trie: ",nounResultFromSearchTrie)
-            if classifySubword(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key]):
+            ##print("Subword from noun trie: ",nounResultFromSearchTrie)
+            resultFromClassify = classifySubword(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
+            if resultFromClassify[0]:
                 found = True
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            else:
+                if len(resultFromClassify)==3:
+                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                elif len(resultFromClassify)==2:
+                    fullFalse = resultFromClassify[1]
+
         elif nounResultFromSearchTrie[2]: #True if superword, else suffix
-            print("Superword from noun trie: ",nounResultFromSearchTrie)
-            if classifySuperword(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key]):
+            ##print("Superword from noun trie: ",nounResultFromSearchTrie)
+            resultFromClassify = classifySuperword(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
+            if resultFromClassify[0]:
                 found = True
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            else:
+                if len(resultFromClassify)==3:
+                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                elif len(resultFromClassify)==2:
+                    fullFalse = resultFromClassify[1]
         else:
-            print("Suffix from noun trie: ",nounResultFromSearchTrie)
-            if classifySuffix(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key]):
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            ##print("Suffix from noun trie: ",nounResultFromSearchTrie)
+            resultFromClassify = classifySuffix(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
+            if resultFromClassify[0]:
+                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
                 found = True
+            else:
+                if len(resultFromClassify)==3:
+                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                elif len(resultFromClassify)==2:
+                    fullFalse = resultFromClassify[1]
 
         if adjResultFromSearchTrie[1] and not found:
-            print("Subword from adjective trie: ",adjResultFromSearchTrie)
-            if classifySubword(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key]):
+            ##print("Subword from adjective trie: ",adjResultFromSearchTrie)
+            resultFromClassify = classifySubword(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
+            if resultFromClassify[0]:
                 found = True
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            else:
+                if len(resultFromClassify)==3:
+                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                elif len(resultFromClassify)==2:
+                    fullFalse = resultFromClassify[1]
+
         elif adjResultFromSearchTrie[2] and not found:
-            print("Superword from adjective trie: ",adjResultFromSearchTrie)
-            if classifySuperword(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key]):
+            ##print("Superword from adjective trie: ",adjResultFromSearchTrie)
+            resultFromClassify = classifySuperword(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
+            if resultFromClassify[0]:
                 found = True
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            else:
+                if len(resultFromClassify)==3:
+                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                elif len(resultFromClassify)==2:
+                    fullFalse = resultFromClassify[1]
         elif not found:
-            print("Suffix from adjective trie: ",adjResultFromSearchTrie)
-            if classifySuffix(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key]):
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            ##print("Suffix from adjective trie: ",adjResultFromSearchTrie)
+            resultFromClassify = classifySuffix(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
+            if resultFromClassify[0]:
+                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
                 found = True
+            else:
+                if len(resultFromClassify)==3:
+                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                elif len(resultFromClassify)==2:
+                    fullFalse = resultFromClassify[1]
 
 
         if verbResultFromSearchTrie[1] and not found:
-            print("Subword from verb trie: ",verbResultFromSearchTrie)
-            if classifySubword(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key]):
+            ##print("Subword from verb trie: ",verbResultFromSearchTrie)
+            resultFromClassify = classifySubword(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
+            if resultFromClassify[0]:
                 found = True
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            else:
+                if len(resultFromClassify)==3:
+                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                elif len(resultFromClassify)==2:
+                    fullFalse = resultFromClassify[1]
+
         elif verbResultFromSearchTrie[2] and not found:
-            print("Superword from verb trie: ",verbResultFromSearchTrie)
-            if classifySuperword(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key]):
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            ##print("Superword from verb trie: ",verbResultFromSearchTrie)
+            resultFromClassify = classifySuperword(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
+            if resultFromClassify[0]:
+                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
                 found = True
+            else:
+                if len(resultFromClassify)==3:
+                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                elif len(resultFromClassify)==2:
+                    fullFalse = resultFromClassify[1]
+
         elif not found:
-            print("Suffix from verb trie: ",verbResultFromSearchTrie)
-            if classifySuffix(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key]):
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            ##print("Suffix from verb trie: ",verbResultFromSearchTrie)
+            resultFromClassify = classifySuffix(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
+            if resultFromClassify[0]:
+                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
                 found = True
+            else:
+                if len(resultFromClassify)==3:
+                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                elif len(resultFromClassify)==2:
+                    fullFalse = resultFromClassify[1]
 
         if pronResultFromSearchTrie[1] and not found:
-            print("Subword from pronoun trie: ",pronResultFromSearchTrie)
-            if classifySubword(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key]):
+            ##print("Subword from pronoun trie: ",pronResultFromSearchTrie)
+            resultFromClassify = classifySubword(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
+            if resultFromClassify[0]:
                 found = True
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        if pronResultFromSearchTrie[2] and not found:
-            print("Superword from pronoun trie: ",pronResultFromSearchTrie)
-            if classifySuperword(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key]):
-                found = True
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        elif not found:
-            print("Suffix from pronoun trie: ",pronResultFromSearchTrie)
-            if classifySuffix(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key]):
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                found = True
+                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            else:
+                if len(resultFromClassify)==3:
+                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                elif len(resultFromClassify)==2:
+                    fullFalse = resultFromClassify[1]
 
+        elif pronResultFromSearchTrie[2] and not found:
+            ##print("Superword from pronoun trie: ",pronResultFromSearchTrie)
+            resultFromClassify = classifySuperword(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
+            if resultFromClassify[0]:
+                found = True
+                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            else:
+                if len(resultFromClassify)==3:
+                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                elif len(resultFromClassify)==2:
+                    fullFalse = resultFromClassify[1]
+
+        elif not found:
+            ##print("Suffix from pronoun trie: ",pronResultFromSearchTrie)
+            resultFromClassify = classifySuffix(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
+            if resultFromClassify[0]:
+                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                found = True
+            else:
+                if len(resultFromClassify)==3:
+                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                elif len(resultFromClassify)==2:
+                    fullFalse = resultFromClassify[1]
 
         if numResultFromSearchTrie[1] and not found:
-            print("Subword from numeral trie: ",numResultFromSearchTrie)
-            if classifySubword(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key]):
+            ##print("Subword from numeral trie: ",numResultFromSearchTrie)
+            resultFromClassify = classifySubword(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
+            if resultFromClassify[0]:
                 found = True
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        if numResultFromSearchTrie[2] and not found:
-            print("Superword from numeral trie: ",numResultFromSearchTrie)
-            if classifySuperword(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key]):
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            else:
+                if len(resultFromClassify)==3:
+                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                elif len(resultFromClassify)==2:
+                    fullFalse = resultFromClassify[1]
+
+        elif numResultFromSearchTrie[2] and not found:
+            ##print("Superword from numeral trie: ",numResultFromSearchTrie)
+            resultFromClassify = classifySuperword(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
+            if resultFromClassify[0]:
+                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
                 found = True
+            else:
+                if len(resultFromClassify)==3:
+                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                elif len(resultFromClassify)==2:
+                    fullFalse = resultFromClassify[1]
+
         elif not found:
-            print("Suffix from numeral trie: ",numResultFromSearchTrie)
-            if classifySuffix(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key]):
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            ##print("Suffix from numeral trie: ",numResultFromSearchTrie)
+            resultFromClassify = classifySuffix(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
+            if resultFromClassify[0]:
+                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
                 found = True
+            else:
+                if len(resultFromClassify)==3:
+                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                elif len(resultFromClassify)==2:
+                    fullFalse = resultFromClassify[1]
+
         if found: pogodija+=1
         else:
             falija+=1
+            if halfFalse:
+                confusionMatrix(halfFalse)
+            else:
+                confusionMatrix(fullFalse)
         k="pogodija: "+str(pogodija)+ "\nfalija: "+str(falija)
         with open('guessOrfail.txt', 'w') as outfile:
             json.dump(k, outfile)
@@ -461,12 +616,12 @@ separate(trainsize)
 t=time.time()
 decideFromTrainTries()
 print(time.time()-t)
-x='\t\tACTUAL\n\t  _____________________________\n\t\t N     V     A     P     M\n'
+x='\t\tACTUAL\n\t  _____________________________\n\t\t N     V     A     P     M     ?\n'
 x+='\tP|\n\tR| N     '+str(noun)+'     '+str(verbSaidNoun)+'     '+str(adjSaidNoun)+'     '+str(pronSaidNoun)+'     '+str(numSaidNoun)
 x+='\n\tE|\n\tD| V     '+str(nounSaidVerb)+'     '+str(ver)+'     '+str(adjSaidVerb)+'     '+str(pronSaidVerb)+'     '+str(numSaidVerb)
 x+='\n\tI| \n\tC| A     '+str(nounSaidAdj)+'     '+str(verbSaidAdj)+'     '+str(adj)+'     '+str(pronSaidAdj)+'     '+str(numSaidAdj)
 x+='\n\tT|\n\tI| M     '+str(nounSaidNum)+'     '+str(verbSaidNum)+'     '+str(adjSaidNum)+'     '+str(pronSaidNum)+'     '+str(num)
 x+='\n\tO|\n\tN| P     '+str(nounSaidPron)+'     '+str(verbSaidPron)+'     '+str(adjSaidPron)+'     '+str(pron)+'     '+str(numSaidPron)
-x+='\n\t |\n\t | ?     '+str(nounSaidUnknown)+'     '+str(verbSaidUnknown)+'     '+str(adjSaidUnknown)+'     '+str(pronSaidUnknown)+'     '+str(numSaidUnknown)
+x+='\n\t |\n\t | ?     '+str(nounSaidUnknown)+'     '+str(verbSaidUnknown)+'     '+str(adjSaidUnknown)+'     '+str(pronSaidUnknown)+'     '+str(numSaidUnknown)+'     '+str(unknown)
 print(x)
 #dot.render("..//trieDot.gv", view=True)
