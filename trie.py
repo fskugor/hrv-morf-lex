@@ -81,6 +81,19 @@ def search(trie, word):
         elif subword:
             return [subword,True, False]
         return [suffix[::-1],False, False]# returns either suffix or subword(if exists)
+
+def searchLongestSuffix(trie, word):
+    current = trie[0]
+    j = len(word)-1
+    suffix=''
+    currentNoOfWordsPassThrough=0
+    while(word[j] in current):
+        suffix+=word[j]
+        currentNoOfWordsPassThrough = current.get(word[j])[1]
+        current = current.get(word[j])[0]
+        if j==1: break
+        j-=1
+    return [suffix[::-1],currentNoOfWordsPassThrough]# returns either suffix or subword(if exists)
 def printify(trie):
     for k in trie[0]: #recursive function for adding nodes and connect them to edges for visualization to .dot file
         if(((trie[0])[k])[4] == True):
@@ -406,193 +419,187 @@ def decideFromTrainTries():
     testDict = read('../test.pickle') #list
     for key in testDict: # prolazimo kroz svaki prikaz i uzmemo oblik(token=lemma) za testiranje
         testWord=testDict[key][0][0] #oblik koji nije nužno jednak lemmi
-        nounResultFromSearchTrie = search(nounTrainTrie, testWord)
-        adjResultFromSearchTrie = search(adjectiveTrainTrie, testWord)
-        verbResultFromSearchTrie = search(verbTrainTrie, testWord)
-        pronResultFromSearchTrie = search(pronounTrainTrie, testWord)
-        numResultFromSearchTrie = search(numeralTrainTrie, testWord)
-        #print(testWord)
-
+        nounResultFromSearchTrie = ''
+        adjResultFromSearchTrie = ''
+        verbResultFromSearchTrie = ''
+        pronResultFromSearchTrie = ''
+        numResultFromSearchTrie = ''
+        print(testWord)
+        nounTrieLongestSuffix = searchLongestSuffix(nounTrainTrie, testWord)
+        verbTrieLongestSuffix = searchLongestSuffix(verbTrainTrie, testWord)
+        adjTrieLongestSuffix = searchLongestSuffix(adjectiveTrainTrie, testWord)
+        pronTrieLongestSuffix = searchLongestSuffix(pronounTrainTrie, testWord)
+        numTrieLongestSuffix = searchLongestSuffix(numeralTrainTrie, testWord)
+        print(nounTrieLongestSuffix)
+        print(verbTrieLongestSuffix)
+        print(adjTrieLongestSuffix)
+        print(pronTrieLongestSuffix)
+        print(numTrieLongestSuffix)
+        suffix = [len(nounTrieLongestSuffix[0]), len(verbTrieLongestSuffix[0]), \
+                  len(adjTrieLongestSuffix[0]), len(pronTrieLongestSuffix[0]), len(numTrieLongestSuffix[0])]
+        suffixMax = max(suffix)
+        trieFromWhichClassifyStarts = []
+        if suffix[0]==suffixMax: trieFromWhichClassifyStarts+=[('N', nounTrieLongestSuffix[1])]
+        if suffix[1]==suffixMax: trieFromWhichClassifyStarts+=[('V', verbTrieLongestSuffix[1])]
+        if suffix[2]==suffixMax: trieFromWhichClassifyStarts+=[('A', adjTrieLongestSuffix[1])]
+        if suffix[3]==suffixMax: trieFromWhichClassifyStarts+=[('P', pronTrieLongestSuffix[1])]
+        if suffix[4]==suffixMax: trieFromWhichClassifyStarts+=[('M', numTrieLongestSuffix[1])]
         found = False
         halfFalse, fullFalse = '', ''
-        if nounResultFromSearchTrie[1]:
-            ##print("Subword from noun trie: ",nounResultFromSearchTrie)
-            resultFromClassify = classifySubword(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
-            if resultFromClassify[0]:
-                found = True
-                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-            else:
-                if len(resultFromClassify)==3:
-                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                elif len(resultFromClassify)==2:
-                    fullFalse = resultFromClassify[1]
+        for pair in trieFromWhichClassifyStarts:
+            if pair[0]=='N':
+                nounResultFromSearchTrie = search(nounTrainTrie, testWord)
+                if nounResultFromSearchTrie[1]:
+                    resultFromClassify = classifySubword(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
+                    if resultFromClassify[0]:
+                        found = True
+                    else:
+                        if len(resultFromClassify)==3:
+                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                        elif len(resultFromClassify)==2:
+                            fullFalse = resultFromClassify[1]
 
-        elif nounResultFromSearchTrie[2]: #True if superword, else suffix
-            ##print("Superword from noun trie: ",nounResultFromSearchTrie)
-            resultFromClassify = classifySuperword(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
-            if resultFromClassify[0]:
-                found = True
-                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-            else:
-                if len(resultFromClassify)==3:
-                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                elif len(resultFromClassify)==2:
-                    fullFalse = resultFromClassify[1]
-        else:
-            ##print("Suffix from noun trie: ",nounResultFromSearchTrie)
-            resultFromClassify = classifySuffix(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
-            if resultFromClassify[0]:
-                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                found = True
-            else:
-                if len(resultFromClassify)==3:
-                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                elif len(resultFromClassify)==2:
-                    fullFalse = resultFromClassify[1]
+                elif nounResultFromSearchTrie[2]: #True if superword, else suffix
+                    resultFromClassify = classifySuperword(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
+                    if resultFromClassify[0]:
+                        found = True
+                    else:
+                        if len(resultFromClassify)==3:
+                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                        elif len(resultFromClassify)==2:
+                            fullFalse = resultFromClassify[1]
+                else:
+                    resultFromClassify = classifySuffix(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
+                    if resultFromClassify[0]:
+                        found = True
+                    else:
+                        if len(resultFromClassify)==3:
+                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                        elif len(resultFromClassify)==2:
+                            fullFalse = resultFromClassify[1]
+            elif pair[0]=='V':
+                verbResultFromSearchTrie = search(verbTrainTrie, testWord)
+                if verbResultFromSearchTrie[1] and not found:
+                    resultFromClassify = classifySubword(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
+                    if resultFromClassify[0]:
+                        found = True
+                    else:
+                        if len(resultFromClassify)==3:
+                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                        elif len(resultFromClassify)==2:
+                            fullFalse = resultFromClassify[1]
 
-        if adjResultFromSearchTrie[1] and not found:
-            ##print("Subword from adjective trie: ",adjResultFromSearchTrie)
-            resultFromClassify = classifySubword(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
-            if resultFromClassify[0]:
-                found = True
-                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-            else:
-                if len(resultFromClassify)==3:
-                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                elif len(resultFromClassify)==2:
-                    fullFalse = resultFromClassify[1]
+                elif verbResultFromSearchTrie[2] and not found:
+                    resultFromClassify = classifySuperword(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
+                    if resultFromClassify[0]:
+                        found = True
+                    else:
+                        if len(resultFromClassify)==3:
+                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                        elif len(resultFromClassify)==2:
+                            fullFalse = resultFromClassify[1]
 
-        elif adjResultFromSearchTrie[2] and not found:
-            ##print("Superword from adjective trie: ",adjResultFromSearchTrie)
-            resultFromClassify = classifySuperword(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
-            if resultFromClassify[0]:
-                found = True
-                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-            else:
-                if len(resultFromClassify)==3:
-                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                elif len(resultFromClassify)==2:
-                    fullFalse = resultFromClassify[1]
-        elif not found:
-            ##print("Suffix from adjective trie: ",adjResultFromSearchTrie)
-            resultFromClassify = classifySuffix(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
-            if resultFromClassify[0]:
-                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                found = True
-            else:
-                if len(resultFromClassify)==3:
-                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                elif len(resultFromClassify)==2:
-                    fullFalse = resultFromClassify[1]
+                elif not found:
+                    resultFromClassify = classifySuffix(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
+                    if resultFromClassify[0]:
+                        found = True
+                    else:
+                        if len(resultFromClassify)==3:
+                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                        elif len(resultFromClassify)==2:
+                            fullFalse = resultFromClassify[1]
+            elif pair[0]=='A':
+                adjResultFromSearchTrie = search(adjectiveTrainTrie, testWord)
+                if adjResultFromSearchTrie[1] and not found:
+                    resultFromClassify = classifySubword(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
+                    if resultFromClassify[0]:
+                        found = True
+                    else:
+                        if len(resultFromClassify)==3:
+                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                        elif len(resultFromClassify)==2:
+                            fullFalse = resultFromClassify[1]
 
+                elif adjResultFromSearchTrie[2] and not found:
+                    resultFromClassify = classifySuperword(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
+                    if resultFromClassify[0]:
+                        found = True
+                    else:
+                        if len(resultFromClassify)==3:
+                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                        elif len(resultFromClassify)==2:
+                            fullFalse = resultFromClassify[1]
+                elif not found:
+                    resultFromClassify = classifySuffix(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
+                    if resultFromClassify[0]:
+                        found = True
+                    else:
+                        if len(resultFromClassify)==3:
+                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                        elif len(resultFromClassify)==2:
+                            fullFalse = resultFromClassify[1]
+            elif pair[0]=='P':
+                pronResultFromSearchTrie = search(pronounTrainTrie, testWord)
+                if pronResultFromSearchTrie[1] and not found:
+                    resultFromClassify = classifySubword(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
+                    if resultFromClassify[0]:
+                        found = True
+                    else:
+                        if len(resultFromClassify)==3:
+                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                        elif len(resultFromClassify)==2:
+                            fullFalse = resultFromClassify[1]
 
-        if verbResultFromSearchTrie[1] and not found:
-            ##print("Subword from verb trie: ",verbResultFromSearchTrie)
-            resultFromClassify = classifySubword(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
-            if resultFromClassify[0]:
-                found = True
-                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-            else:
-                if len(resultFromClassify)==3:
-                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                elif len(resultFromClassify)==2:
-                    fullFalse = resultFromClassify[1]
+                elif pronResultFromSearchTrie[2] and not found:
+                    resultFromClassify = classifySuperword(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
+                    if resultFromClassify[0]:
+                        found = True
+                    else:
+                        if len(resultFromClassify)==3:
+                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                        elif len(resultFromClassify)==2:
+                            fullFalse = resultFromClassify[1]
 
-        elif verbResultFromSearchTrie[2] and not found:
-            ##print("Superword from verb trie: ",verbResultFromSearchTrie)
-            resultFromClassify = classifySuperword(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
-            if resultFromClassify[0]:
-                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                found = True
-            else:
-                if len(resultFromClassify)==3:
-                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                elif len(resultFromClassify)==2:
-                    fullFalse = resultFromClassify[1]
+                elif not found:
+                    resultFromClassify = classifySuffix(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
+                    if resultFromClassify[0]:
+                        found = True
+                    else:
+                        if len(resultFromClassify)==3:
+                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                        elif len(resultFromClassify)==2:
+                            fullFalse = resultFromClassify[1]
+            elif pair[0]=='M':
+                numResultFromSearchTrie = search(numeralTrainTrie, testWord)
+                if numResultFromSearchTrie[1] and not found:
+                    resultFromClassify = classifySubword(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
+                    if resultFromClassify[0]:
+                        found = True
+                    else:
+                        if len(resultFromClassify)==3:
+                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                        elif len(resultFromClassify)==2:
+                            fullFalse = resultFromClassify[1]
 
-        elif not found:
-            ##print("Suffix from verb trie: ",verbResultFromSearchTrie)
-            resultFromClassify = classifySuffix(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
-            if resultFromClassify[0]:
-                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                found = True
-            else:
-                if len(resultFromClassify)==3:
-                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                elif len(resultFromClassify)==2:
-                    fullFalse = resultFromClassify[1]
+                elif numResultFromSearchTrie[2] and not found:
+                    resultFromClassify = classifySuperword(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
+                    if resultFromClassify[0]:
+                        found = True
+                    else:
+                        if len(resultFromClassify)==3:
+                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                        elif len(resultFromClassify)==2:
+                            fullFalse = resultFromClassify[1]
 
-        if pronResultFromSearchTrie[1] and not found:
-            ##print("Subword from pronoun trie: ",pronResultFromSearchTrie)
-            resultFromClassify = classifySubword(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
-            if resultFromClassify[0]:
-                found = True
-                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-            else:
-                if len(resultFromClassify)==3:
-                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                elif len(resultFromClassify)==2:
-                    fullFalse = resultFromClassify[1]
-
-        elif pronResultFromSearchTrie[2] and not found:
-            ##print("Superword from pronoun trie: ",pronResultFromSearchTrie)
-            resultFromClassify = classifySuperword(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
-            if resultFromClassify[0]:
-                found = True
-                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-            else:
-                if len(resultFromClassify)==3:
-                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                elif len(resultFromClassify)==2:
-                    fullFalse = resultFromClassify[1]
-
-        elif not found:
-            ##print("Suffix from pronoun trie: ",pronResultFromSearchTrie)
-            resultFromClassify = classifySuffix(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
-            if resultFromClassify[0]:
-                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                found = True
-            else:
-                if len(resultFromClassify)==3:
-                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                elif len(resultFromClassify)==2:
-                    fullFalse = resultFromClassify[1]
-
-        if numResultFromSearchTrie[1] and not found:
-            ##print("Subword from numeral trie: ",numResultFromSearchTrie)
-            resultFromClassify = classifySubword(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
-            if resultFromClassify[0]:
-                found = True
-                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-            else:
-                if len(resultFromClassify)==3:
-                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                elif len(resultFromClassify)==2:
-                    fullFalse = resultFromClassify[1]
-
-        elif numResultFromSearchTrie[2] and not found:
-            ##print("Superword from numeral trie: ",numResultFromSearchTrie)
-            resultFromClassify = classifySuperword(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
-            if resultFromClassify[0]:
-                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                found = True
-            else:
-                if len(resultFromClassify)==3:
-                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                elif len(resultFromClassify)==2:
-                    fullFalse = resultFromClassify[1]
-
-        elif not found:
-            ##print("Suffix from numeral trie: ",numResultFromSearchTrie)
-            resultFromClassify = classifySuffix(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
-            if resultFromClassify[0]:
-                ##print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                found = True
-            else:
-                if len(resultFromClassify)==3:
-                    halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                elif len(resultFromClassify)==2:
-                    fullFalse = resultFromClassify[1]
+                elif not found:
+                    resultFromClassify = classifySuffix(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
+                    if resultFromClassify[0]:
+                        found = True
+                    else:
+                        if len(resultFromClassify)==3:
+                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
+                        elif len(resultFromClassify)==2:
+                            fullFalse = resultFromClassify[1]
 
         if found: pogodija+=1
         else:
@@ -616,12 +623,12 @@ separate(trainsize)
 t=time.time()
 decideFromTrainTries()
 print(time.time()-t)
-x='\t\tACTUAL\n\t  _____________________________\n\t\t N     V     A     P     M     ?\n'
-x+='\tP|\n\tR| N     '+str(noun)+'     '+str(verbSaidNoun)+'     '+str(adjSaidNoun)+'     '+str(pronSaidNoun)+'     '+str(numSaidNoun)
-x+='\n\tE|\n\tD| V     '+str(nounSaidVerb)+'     '+str(ver)+'     '+str(adjSaidVerb)+'     '+str(pronSaidVerb)+'     '+str(numSaidVerb)
-x+='\n\tI| \n\tC| A     '+str(nounSaidAdj)+'     '+str(verbSaidAdj)+'     '+str(adj)+'     '+str(pronSaidAdj)+'     '+str(numSaidAdj)
-x+='\n\tT|\n\tI| M     '+str(nounSaidNum)+'     '+str(verbSaidNum)+'     '+str(adjSaidNum)+'     '+str(pronSaidNum)+'     '+str(num)
-x+='\n\tO|\n\tN| P     '+str(nounSaidPron)+'     '+str(verbSaidPron)+'     '+str(adjSaidPron)+'     '+str(pron)+'     '+str(numSaidPron)
-x+='\n\t |\n\t | ?     '+str(nounSaidUnknown)+'     '+str(verbSaidUnknown)+'     '+str(adjSaidUnknown)+'     '+str(pronSaidUnknown)+'     '+str(numSaidUnknown)+'     '+str(unknown)
+x='\t\tACTUAL\n\t  _____________________________\n\t\t N        V        A        P        M\n'
+x+='\tP|\n\tR| N     '+str(noun)+'        '+str(verbSaidNoun)+'        '+str(adjSaidNoun)+'        '+str(pronSaidNoun)+'        '+str(numSaidNoun)
+x+='\n\tE|\n\tD| V     '+str(nounSaidVerb)+'        '+str(ver)+'        '+str(adjSaidVerb)+'        '+str(pronSaidVerb)+'        '+str(numSaidVerb)
+x+='\n\tI| \n\tC| A     '+str(nounSaidAdj)+'        '+str(verbSaidAdj)+'        '+str(adj)+'        '+str(pronSaidAdj)+'        '+str(numSaidAdj)
+x+='\n\tT|\n\tI| M     '+str(nounSaidNum)+'        '+str(verbSaidNum)+'        '+str(adjSaidNum)+'        '+str(pronSaidNum)+'        '+str(num)
+x+='\n\tO|\n\tN| P     '+str(nounSaidPron)+'        '+str(verbSaidPron)+'        '+str(adjSaidPron)+'        '+str(pron)+'        '+str(numSaidPron)
+x+='\n\t |\n\t | ?     '+str(nounSaidUnknown)+'        '+str(verbSaidUnknown)+'        '+str(adjSaidUnknown)+'        '+str(pronSaidUnknown)+'        '+str(numSaidUnknown)
 print(x)
 #dot.render("..//trieDot.gv", view=True)
