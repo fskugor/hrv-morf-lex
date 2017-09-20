@@ -180,7 +180,7 @@ def separate(trainsize):
     for key in pronoun:
         br+=1
         for j in pronoun[key]:
-            if br>(pron_count*0.5):
+            if br>(pron_count*trainsize):
                 if not key in test: test[key] = [(j[0],j[1])]
                 else: test[key] += [(j[0],j[1])]
             else:
@@ -192,7 +192,7 @@ def separate(trainsize):
     for key in numeral:
         br+=1
         for j in numeral[key]:
-            if br>(num_count*0.5):
+            if br>(num_count*trainsize):
                 if not key in test: test[key] = [(j[0],j[1])]
                 else: test[key] += [(j[0],j[1])]
             else:
@@ -251,7 +251,7 @@ def confusionMatrix(fail):
             elif fail[1] == 'A': numSaidAdj+=1
             elif fail[1] == 'V': numSaidVerb+=1
             elif fail[1] == 'P': numSaidPron+=1
-    else:
+    else: # ? group --> fail to generate exact model (token1,msd1),...,(tokenN,msdN)
         if fail == '' : unknown+=1
         elif fail == 'N': nounSaidUnknown+=1
         elif fail == 'A': adjSaidUnknown+=1
@@ -260,9 +260,8 @@ def confusionMatrix(fail):
         elif fail == 'M': numSaidUnknown+=1
 
 def compare(original, generated):
-    originalGroupByToken, generatedGroupByToken, br, guessedMsd, generatedKeys, originalKeys = {}, {}, 0, 0, [], []
+    originalGroupByToken, generatedGroupByToken, br, guessedMsd, generatedKeys, originalKeys, msdFoundInGeneratedModel = {}, {}, 0, 0, [], [], 0
     global noun, adj, ver, pron, num
-
     for pair in original:
         if not pair[0] in originalGroupByToken: originalGroupByToken[pair[0]]=[pair[1]]
         else: originalGroupByToken[pair[0]]+=[pair[1]]
@@ -272,9 +271,6 @@ def compare(original, generated):
     generatedKeys = [key for key in generatedGroupByToken]
     originalKeys = [key for key in originalGroupByToken]
     if set(generatedKeys) == set(originalKeys) and original[0][1][0]==generated[0][1][0]:
-        #print(generatedGroupByToken)
-        #print('++++++++++++++++++++++++++++++++++++++++++++')
-        #print(originalGroupByToken)
         if generated[0][1][0] == 'N': noun+=1
         elif generated[0][1][0] == 'A': adj+=1
         elif generated[0][1][0] == 'V': ver+=1
@@ -286,12 +282,17 @@ def compare(original, generated):
                     br+=1
                     break
         guessedMsd=br/len(originalGroupByToken)
+        if br == len(originalGroupByToken):
+            guessedMsd = 1
+        elif br == 0: guessedMsd = 0
         f = open('msd.txt', 'a')
         f.write(str(guessedMsd)+', '+original[0][1][0]+'\n')
         return [True]
     elif set(generatedKeys) == set(originalKeys) and original[0][1][0]!=generated[0][1][0]:
         return [False, original[0][1][0], generated[0][1][0]] #for confusion matrix
     else:
+        f = open('wordsClassifiedAsUnknown50ProcTrain.txt', 'a')
+        f.write(str(generated)+' ------> '+str(original)+'\n\n')
         return[False,original[0][1][0]] #also for confusion matrix
 
 def classifySubword(resultFromSearchTrie, trainDict, testWord, testPairs):
@@ -306,9 +307,6 @@ def classifySubword(resultFromSearchTrie, trainDict, testWord, testPairs):
         if found: break
 
     if pairs_train(lemma):
-        #print("Lemma za generiranje testnog prikaza: ",lemma)
-        #print("\nTrain token: ",resultFromSearchTrie)
-        #print("\nTestni token: ",testWord)
         generatedTestModel, testModelOrigin = [], []
         pairs = pairs_train(lemma)
         subword = len(resultFromSearchTrie)
@@ -320,13 +318,11 @@ def classifySubword(resultFromSearchTrie, trainDict, testWord, testPairs):
         result = compare(testModelOrigin,generatedTestModel)
         if result[0]:
             return [True]
-            #print("Test model found: ",generatedTestModel)
         else:
             if len(result)==3:
                 return [False, result[1], result[2]]
             else:
                 return [False, result[1]]
-            #print("Test model not found")
     else: return [False]
 
 def classifySuperword(resultFromSearchTrie, trainDict, testWord, testPairs):
@@ -341,14 +337,11 @@ def classifySuperword(resultFromSearchTrie, trainDict, testWord, testPairs):
         if found: break
 
     if pairs_train(lemma):
-        #print("Lemma za generiranje testnog prikaza: ",lemma)
-        #print("\nTrain token: ",lemma)
-        #print("\nTestni token: ",testWord)
         generatedTestModel, testModelOrigin = [], []
         pairs = pairs_train(lemma)
         test=len(testWord)
         preffixTrain = resultFromSearchTrie[:-test]
-        #print(preffixTrain)
+        #print(preffxTrain)
         for i in pairs: #zamijenimo svaki prefix od treninga sa našim od testa
             generatedTestModel += [(i[0][len(preffixTrain):],i[1])]
         for j in testPairs:
@@ -356,13 +349,11 @@ def classifySuperword(resultFromSearchTrie, trainDict, testWord, testPairs):
         result = compare(testModelOrigin,generatedTestModel)
         if result[0]:
             return [True]
-            #print("Test model found: ",generatedTestModel)
         else:
             if len(result)==3:
                 return [False, result[1], result[2]]
             else:
                 return [False, result[1]]
-            #print("Test model not found")
     else: return [False]
 
 def classifySuffix(resultFromSearchTrie, trainDict, testWord, testPairs):
@@ -379,9 +370,6 @@ def classifySuffix(resultFromSearchTrie, trainDict, testWord, testPairs):
             if found: break
 
     if pairs_train(lemma):
-        #print("Lemma za generiranje testnog prikaza: ",lemma)
-        #print("\nTrain token: ",token)
-        #print("\nTestni token: ",testWord)
         lemmaEqSuffix = False
         generatedTestModel, testModelOrigin = [], []
         pairs = pairs_train(lemma)
@@ -391,8 +379,6 @@ def classifySuffix(resultFromSearchTrie, trainDict, testWord, testPairs):
             lemmaEqSuffix = True
         else: preffixTrain = token[:-suffix]
         preffixTest = testWord[:-suffix]
-        #print(preffixTrain)
-        #print(preffixTest)
         for i in pairs: #zamijenimo svaki prefix od treninga sa našim od testa
             if lemmaEqSuffix:
                 generatedTestModel += [(preffixTest.lower()+i[0],i[1])]
@@ -403,13 +389,11 @@ def classifySuffix(resultFromSearchTrie, trainDict, testWord, testPairs):
         result = compare(testModelOrigin,generatedTestModel)
         if result[0]:
             return [True]
-            #print("Test model found: ",generatedTestModel)
         else:
             if len(result)==3:
                 return [False, result[1], result[2]]
             else:
                 return [False, result[1]]
-            #print("Test model not found")
     else: return [False]
 
 def suffixTrieClassify():
@@ -438,7 +422,7 @@ def suffixTrieClassify():
         suffix = [len(nounTrieLongestSuffix[0]), len(verbTrieLongestSuffix[0]), \
                   len(adjTrieLongestSuffix[0]), len(pronTrieLongestSuffix[0]), len(numTrieLongestSuffix[0])]
         suffixMax = max(suffix)
-        trieFromWhichClassifyStarts = []
+        trieFromWhichClassifyStarts = [] #array of possible type of test word, if the word has more max suffixes
         if suffix[0]==suffixMax: trieFromWhichClassifyStarts+=[('N', nounTrieLongestSuffix[1])]
         if suffix[1]==suffixMax: trieFromWhichClassifyStarts+=[('V', verbTrieLongestSuffix[1])]
         if suffix[2]==suffixMax: trieFromWhichClassifyStarts+=[('A', adjTrieLongestSuffix[1])]
@@ -454,33 +438,30 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
+                        if testDict[key][0][1][0] != 'N': noOfFailed+=1
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                            noOfFailed+=1
                         elif len(resultFromClassify)==2:
-                            if testDict[key][0][1][0] != 'N': noOfFailed+=1
                             fullFalse = resultFromClassify[1]
                 elif nounResultFromSearchTrie[2]: #True if superword, else suffix
                     resultFromClassify = classifySuperword(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
+                        if testDict[key][0][1][0] != 'N': noOfFailed+=1
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                            noOfFailed+=1
                         elif len(resultFromClassify)==2:
-                            if testDict[key][0][1][0] != 'N': noOfFailed+=1
                             fullFalse = resultFromClassify[1]
                 else:
                     resultFromClassify = classifySuffix(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
+                        if testDict[key][0][1][0] != 'N': noOfFailed+=1
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                            noOfFailed+=1
                         elif len(resultFromClassify)==2:
-                            if testDict[key][0][1][0] != 'N': noOfFailed+=1
                             fullFalse = resultFromClassify[1]
             elif pair[0]=='V':
                 verbResultFromSearchTrie = search(verbTrainTrie, testWord)
@@ -489,33 +470,30 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
+                        if testDict[key][0][1][0] != 'V': noOfFailed+=1
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                            noOfFailed+=1
                         elif len(resultFromClassify)==2:
-                            if testDict[key][0][1][0] != 'V': noOfFailed+=1
                             fullFalse = resultFromClassify[1]
                 elif verbResultFromSearchTrie[2] and not found:
                     resultFromClassify = classifySuperword(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
+                        if testDict[key][0][1][0] != 'V': noOfFailed+=1
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                            noOfFailed+=1
                         elif len(resultFromClassify)==2:
-                            if testDict[key][0][1][0] != 'V': noOfFailed+=1
                             fullFalse = resultFromClassify[1]
                 elif not found:
                     resultFromClassify = classifySuffix(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
+                        if testDict[key][0][1][0] != 'V': noOfFailed+=1
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                            noOfFailed+=1
                         elif len(resultFromClassify)==2:
-                            if testDict[key][0][1][0] != 'V': noOfFailed+=1
                             fullFalse = resultFromClassify[1]
             elif pair[0]=='A':
                 adjResultFromSearchTrie = search(adjectiveTrainTrie, testWord)
@@ -524,33 +502,30 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
+                        if testDict[key][0][1][0] != 'A': noOfFailed+=1
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                            noOfFailed+=1
                         elif len(resultFromClassify)==2:
-                            if testDict[key][0][1][0] != 'A': noOfFailed+=1
                             fullFalse = resultFromClassify[1]
                 elif adjResultFromSearchTrie[2] and not found:
                     resultFromClassify = classifySuperword(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
+                        if testDict[key][0][1][0] != 'A': noOfFailed+=1
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                            noOfFailed+=1
                         elif len(resultFromClassify)==2:
-                            if testDict[key][0][1][0] != 'A': noOfFailed+=1
                             fullFalse = resultFromClassify[1]
                 elif not found:
                     resultFromClassify = classifySuffix(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
+                        if testDict[key][0][1][0] != 'A': noOfFailed+=1
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                            noOfFailed+=1
                         elif len(resultFromClassify)==2:
-                            if testDict[key][0][1][0] != 'A': noOfFailed+=1
                             fullFalse = resultFromClassify[1]
             elif pair[0]=='P':
                 pronResultFromSearchTrie = search(pronounTrainTrie, testWord)
@@ -559,33 +534,30 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
+                        if testDict[key][0][1][0] != 'P': noOfFailed+=1
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                            noOfFailed+=1
                         elif len(resultFromClassify)==2:
-                            if testDict[key][0][1][0] != 'P': noOfFailed+=1
                             fullFalse = resultFromClassify[1]
                 elif pronResultFromSearchTrie[2] and not found:
                     resultFromClassify = classifySuperword(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
+                        if testDict[key][0][1][0] != 'P': noOfFailed+=1
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                            noOfFailed+=1
                         elif len(resultFromClassify)==2:
-                            if testDict[key][0][1][0] != 'P': noOfFailed+=1
                             fullFalse = resultFromClassify[1]
                 elif not found:
                     resultFromClassify = classifySuffix(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
+                        if testDict[key][0][1][0] != 'P': noOfFailed+=1
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                            noOfFailed+=1
                         elif len(resultFromClassify)==2:
-                            if testDict[key][0][1][0] != 'P': noOfFailed+=1
                             fullFalse = resultFromClassify[1]
             elif pair[0]=='M':
                 numResultFromSearchTrie = search(numeralTrainTrie, testWord)
@@ -594,22 +566,20 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
+                        if testDict[key][0][1][0] != 'M': noOfFailed+=1
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                            noOfFailed+=1
                         elif len(resultFromClassify)==2:
-                            if testDict[key][0][1][0] != 'M': noOfFailed+=1
                             fullFalse = resultFromClassify[1]
                 elif numResultFromSearchTrie[2] and not found:
                     resultFromClassify = classifySuperword(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
+                        if testDict[key][0][1][0] != 'M': noOfFailed+=1
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                            noOfFailed+=1
                         elif len(resultFromClassify)==2:
-                            if testDict[key][0][1][0] != 'M': noOfFailed+=1
                             fullFalse = resultFromClassify[1]
 
                 elif not found:
@@ -617,12 +587,12 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
+                        if testDict[key][0][1][0] != 'M': noOfFailed+=1
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                            noOfFailed+=1
                         elif len(resultFromClassify)==2:
-                            if testDict[key][0][1][0] != 'M': noOfFailed+=1
                             fullFalse = resultFromClassify[1]
+            if found: break
 
         if found: pogodija+=1
         else:
@@ -631,7 +601,7 @@ def suffixTrieClassify():
                 confusionMatrix(halfFalse)
             else:
                 confusionMatrix(fullFalse)
-        k="pogodija: "+str(pogodija)+ "\nfalija: "+str(falija)+'\nFalija tip: '+str(noOfFailed)
+        k="pogodija sve: "+str(pogodija)+ "\nfalija tip/oblik: "+str(falija)+'\nFalija tip: '+str(noOfFailed)
         with open('guessOrfail.txt', 'w') as outfile:
             json.dump(k, outfile)
 
@@ -666,9 +636,11 @@ def maxentClassify():
     testDict = read('../test.pickle')#dict
     wholeTrain = noun + adjective + verb + pronoun + numeral
     random.shuffle(wholeTrain)
-    trainFeatures=[(featuresForMaxent(word), typeOf) for(word, typeOf) in wholeTrain]
+    trainingSet=[(featuresForMaxent(word), typeOf) for(word, typeOf) in wholeTrain]
+    devTestSet= len(trainingSet)*0.3
+    print("DevSet :",devTestSet)
     print("start train")
-    classifierMaxE=nltk.MaxentClassifier.train(trainFeatures)
+    classifierMaxE=nltk.MaxentClassifier.train(trainingSet[:int(devTestSet)])
     print("finished")
     testLen=len(testDict)
     for key in testDict: # prolazimo kroz svaki prikaz i uzmemo oblik(token=lemma) za testiranje
@@ -683,27 +655,21 @@ def maxentClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if len(resultFromClassify)==3:
-                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                        elif len(resultFromClassify)==2:
+                        if len(resultFromClassify)==2:
                             fullFalse = resultFromClassify[1]
                 elif nounResultFromSearchTrie[2]: #True if superword, else suffix
                     resultFromClassify = classifySuperword(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if len(resultFromClassify)==3:
-                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                        elif len(resultFromClassify)==2:
+                        if len(resultFromClassify)==2:
                             fullFalse = resultFromClassify[1]
                 else:
                     resultFromClassify = classifySuffix(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if len(resultFromClassify)==3:
-                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                        elif len(resultFromClassify)==2:
+                        if len(resultFromClassify)==2:
                             fullFalse = resultFromClassify[1]
             else: noOfFailed+=1
         elif msd=='V':
@@ -714,27 +680,21 @@ def maxentClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if len(resultFromClassify)==3:
-                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                        elif len(resultFromClassify)==2:
+                        if len(resultFromClassify)==2:
                             fullFalse = resultFromClassify[1]
                 elif verbResultFromSearchTrie[2] and not found:
                     resultFromClassify = classifySuperword(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if len(resultFromClassify)==3:
-                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                        elif len(resultFromClassify)==2:
+                        if len(resultFromClassify)==2:
                             fullFalse = resultFromClassify[1]
                 elif not found:
                     resultFromClassify = classifySuffix(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if len(resultFromClassify)==3:
-                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                        elif len(resultFromClassify)==2:
+                        if len(resultFromClassify)==2:
                             fullFalse = resultFromClassify[1]
             else: noOfFailed+=1
         elif msd=='A':
@@ -745,27 +705,21 @@ def maxentClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if len(resultFromClassify)==3:
-                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                        elif len(resultFromClassify)==2:
+                        if len(resultFromClassify)==2:
                             fullFalse = resultFromClassify[1]
                 elif adjResultFromSearchTrie[2] and not found:
                     resultFromClassify = classifySuperword(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if len(resultFromClassify)==3:
-                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                        elif len(resultFromClassify)==2:
+                        if len(resultFromClassify)==2:
                             fullFalse = resultFromClassify[1]
                 elif not found:
                     resultFromClassify = classifySuffix(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if len(resultFromClassify)==3:
-                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                        elif len(resultFromClassify)==2:
+                        if len(resultFromClassify)==2:
                             fullFalse = resultFromClassify[1]
             else: noOfFailed+=1
         elif msd=='M':
@@ -776,18 +730,14 @@ def maxentClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if len(resultFromClassify)==3:
-                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                        elif len(resultFromClassify)==2:
+                        if len(resultFromClassify)==2:
                             fullFalse = resultFromClassify[1]
                 elif numResultFromSearchTrie[2] and not found:
                     resultFromClassify = classifySuperword(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if len(resultFromClassify)==3:
-                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                        elif len(resultFromClassify)==2:
+                        if len(resultFromClassify)==2:
                             fullFalse = resultFromClassify[1]
 
                 elif not found:
@@ -795,9 +745,7 @@ def maxentClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if len(resultFromClassify)==3:
-                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                        elif len(resultFromClassify)==2:
+                        if len(resultFromClassify)==2:
                             fullFalse = resultFromClassify[1]
             else: noOfFailed+=1
         elif msd=='P':
@@ -808,38 +756,30 @@ def maxentClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if len(resultFromClassify)==3:
-                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                        elif len(resultFromClassify)==2:
+                        if len(resultFromClassify)==2:
                             fullFalse = resultFromClassify[1]
                 elif pronResultFromSearchTrie[2] and not found:
                     resultFromClassify = classifySuperword(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if len(resultFromClassify)==3:
-                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                        elif len(resultFromClassify)==2:
+                        if len(resultFromClassify)==2:
                             fullFalse = resultFromClassify[1]
                 elif not found:
                     resultFromClassify = classifySuffix(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if len(resultFromClassify)==3:
-                            halfFalse = resultFromClassify[1] + resultFromClassify[2]
-                        elif len(resultFromClassify)==2:
+                        if len(resultFromClassify)==2:
                             fullFalse = resultFromClassify[1]
             else: noOfFailed+=1
 
         if found: pogodija+=1
         else:
             falija+=1
-            if halfFalse:
-                confusionMatrix(halfFalse)
-            else:
+            if fullFalse:
                 confusionMatrix(fullFalse)
-        k="pogodija: "+str(pogodija)+ "\nfalija: "+str(falija)+'\nFalija tip: '+str(noOfFailed)
+        k="pogodija sve: "+str(pogodija)+ "\nfalija oblik: "+str(falija)+'\nFalija tip skroz: '+str(noOfFailed)
         with open('guessOrfailMaxEnt.txt', 'w') as outfile:
             json.dump(k, outfile)
 
@@ -851,7 +791,7 @@ def maxentClassify():
 dot = Digraph()
 dot.node('0', 'ROOT')
 dot.format = 'svg'
-trainsize = 0.95
+trainsize = 0.9
 separate(trainsize)
 # t=time.time()
 # suffixTrieClassify()
@@ -859,7 +799,7 @@ separate(trainsize)
 k=time.time()
 print("MAXENT")
 maxentClassify()
-print(time.time()-t)
+print(time.time()-k)
 
 x='\t\tACTUAL\n\t  _____________________________\n\t\t N        V        A        P        M\n'
 x+='\tP|\n\tR| N     '+str(noun)+'        '+str(verbSaidNoun)+'        '+str(adjSaidNoun)+'        '+str(pronSaidNoun)+'        '+str(numSaidNoun)
