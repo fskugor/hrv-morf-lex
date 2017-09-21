@@ -204,6 +204,7 @@ def separate(trainsize):
                 if not key in numeral_train: numeral_train[key] = [(j[0],j[1])]
                 else: numeral_train[key] += [(j[0],j[1])]
                 numeralListForMaxent+=[(j[0],j[1][0])]
+
     write('../test.pickle', test)  # write all to files,
     write('../trainNounTrie.pickle', put([{}], noun_train))
     write('../trainAdjectiveTrie.pickle', put([{}], adjective_train))
@@ -416,7 +417,11 @@ def suffixTrieClassify():
     lenTest=len(testDict)
     print("Test length: ",lenTest)
     for key in testDict: # prolazimo kroz svaki prikaz i uzmemo oblik(token=lemma) za testiranje
-        testWord=testDict[key][0][0] #oblik koji nije nužno jednak lemmi
+        words=[]
+        for pair in testDict[key]:
+            words.append(pair[0])
+        random.shuffle(words)
+        testWord=words[0]
         nounResultFromSearchTrie, adjResultFromSearchTrie, pronResultFromSearchTrie = '', '', ''
         verbResultFromSearchTrie, numResultFromSearchTrie = '', ''
         nounTrieLongestSuffix = searchLongestSuffix(nounTrainTrie, testWord)
@@ -613,9 +618,9 @@ def suffixTrieClassify():
 
 
 def featuresForMaxent(word):
-    if word[0].istitle() and len(word)>6: return{'first letter title':word[-2:], 'Last 5 letters':word[-4:], 'last six':word[-6:], 'last five':word[-5:]}
+    if word[0].istitle() and len(word)>6: return{'first letter title':word[-2:], 'Last 5 letters':word[-4:], 'last tree':word[-3:]}
     if word[:3]=='naj' and len(word)>9: return{'first tree leters':word[-3:]}
-    if len(word)>12:return{'Last 4 letters':word[-4:],'last tree':word[-3:],'last six':word[-6:], 'Last four':word[-4:], 'Last 7 letters':word[-7:]}
+    if len(word)>12:return{'Last 4 letters':word[-4:],'last tree':word[-3:],'last six':word[-6:], 'Last four':word[-4:], 'Last 7 letters':word[-5:]}
     if len(word)>8 and len(word)<13:return{'Last 5 letters':word[-4:],'last six':word[-6:],'last tree':word[-3:],'last five':word[-5:]}
     if len(word)==5:return{'last tree':word[-3:],'last two':word[-2:],'sec and last two':word[1]+word[-2:]}
     if len(word)==4:return{'last two':word[-2:], 'last tree':word[-3:],'sec and last':word[1]+word[-1]}
@@ -646,14 +651,18 @@ def maxentClassify():
     random.shuffle(wholeTrain)
     trainingSet=[(featuresForMaxent(word), typeOf) for(word, typeOf) in wholeTrain]
     testLen=len(testDict)
-    print("Train lenght: ", trainingSet)
+    print("Train lenght: ", len(trainingSet))
     print("Test lenght: ", testLen)
     #devTestSet= len(trainingSet)*0.3
     print("start train")
     classifierMaxE=nltk.MaxentClassifier.train(trainingSet)
     print("finished")
     for key in testDict: # prolazimo kroz svaki prikaz i uzmemo oblik(token=lemma) za testiranje
-        testWord = testDict[key][0][0] #oblik koji nije nužno jednak lemmi
+        words=[]
+        for pair in testDict[key]:
+            words.append(pair[0])
+        random.shuffle(words)
+        testWord=words[0]
         msd = testDict[key][0][1][0]
         found  = False
         if msd=='N':
@@ -800,15 +809,15 @@ def maxentClassify():
 dot = Digraph()
 dot.node('0', 'ROOT')
 dot.format = 'svg'
-trainsize = 0.5
+trainsize = 0.8
 separate(trainsize)
-t=time.time()
-suffixTrieClassify()
-print(time.time()-t)
-# k=time.time()
-# print("MAXENT")
-# maxentClassify()
-# print(time.time()-k)
+# t=time.time()
+# suffixTrieClassify()
+# print(time.time()-t)
+k=time.time()
+print("MAXENT")
+maxentClassify()
+print(time.time()-k)
 
 x='\t\tACTUAL\n\t  _____________________________\n\t\t N        V        A        P        M\n'
 x+='\tP|\n\tR| N     '+str(noun)+'        '+str(verbSaidNoun)+'        '+str(adjSaidNoun)+'        '+str(pronSaidNoun)+'        '+str(numSaidNoun)

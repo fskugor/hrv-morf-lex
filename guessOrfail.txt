@@ -1,1 +1,1 @@
-"pogodija: 1370\nfalija: 983\nFalija tip: 519"
+"pogodija sve: 12708\nfalija tip/oblik: 11032\nFalija tip: 3144"
