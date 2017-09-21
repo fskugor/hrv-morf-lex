@@ -343,7 +343,7 @@ def classifySuperword(resultFromSearchTrie, trainDict, testWord, testPairs):
         preffixTrain = resultFromSearchTrie[:-test]
         #print(preffxTrain)
         for i in pairs: #zamijenimo svaki prefix od treninga sa našim od testa
-            generatedTestModel += [(i[0][len(preffixTrain):],i[1])]
+            generatedTestModel += [(i[0][len(preffixTrain):].lower(),i[1])]
         for j in testPairs:
             testModelOrigin +=[(j[0].lower(),j[1])]
         result = compare(testModelOrigin,generatedTestModel)
@@ -410,6 +410,7 @@ def suffixTrieClassify():
     pogodija, falija, noOfFailed = 0, 0, 0
     testDict = read('../test.pickle') #dict
     lenTest=len(testDict)
+    print("Test length: ",lenTest)
     for key in testDict: # prolazimo kroz svaki prikaz i uzmemo oblik(token=lemma) za testiranje
         testWord=testDict[key][0][0] #oblik koji nije nužno jednak lemmi
         nounResultFromSearchTrie, adjResultFromSearchTrie, pronResultFromSearchTrie = '', '', ''
@@ -428,7 +429,7 @@ def suffixTrieClassify():
         if suffix[2]==suffixMax: trieFromWhichClassifyStarts+=[('A', adjTrieLongestSuffix[1])]
         if suffix[3]==suffixMax: trieFromWhichClassifyStarts+=[('P', pronTrieLongestSuffix[1])]
         if suffix[4]==suffixMax: trieFromWhichClassifyStarts+=[('M', numTrieLongestSuffix[1])]
-        found = False
+        found, wrongTypeFound = False, False
         halfFalse, fullFalse = '', ''
         for pair in trieFromWhichClassifyStarts:
             if pair[0]=='N':
@@ -438,7 +439,7 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if testDict[key][0][1][0] != 'N': noOfFailed+=1
+                        if testDict[key][0][1][0] != 'N': wrongTypeFound = True
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
                         elif len(resultFromClassify)==2:
@@ -448,7 +449,7 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if testDict[key][0][1][0] != 'N': noOfFailed+=1
+                        if testDict[key][0][1][0] != 'N': wrongTypeFound = True
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
                         elif len(resultFromClassify)==2:
@@ -458,7 +459,7 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if testDict[key][0][1][0] != 'N': noOfFailed+=1
+                        if testDict[key][0][1][0] != 'N': wrongTypeFound = True
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
                         elif len(resultFromClassify)==2:
@@ -470,7 +471,7 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if testDict[key][0][1][0] != 'V': noOfFailed+=1
+                        if testDict[key][0][1][0] != 'V': wrongTypeFound = True
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
                         elif len(resultFromClassify)==2:
@@ -480,7 +481,7 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if testDict[key][0][1][0] != 'V': noOfFailed+=1
+                        if testDict[key][0][1][0] != 'V': wrongTypeFound = True
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
                         elif len(resultFromClassify)==2:
@@ -490,7 +491,7 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if testDict[key][0][1][0] != 'V': noOfFailed+=1
+                        if testDict[key][0][1][0] != 'V': wrongTypeFound = True
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
                         elif len(resultFromClassify)==2:
@@ -502,7 +503,7 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if testDict[key][0][1][0] != 'A': noOfFailed+=1
+                        if testDict[key][0][1][0] != 'A': wrongTypeFound = True
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
                         elif len(resultFromClassify)==2:
@@ -512,7 +513,7 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if testDict[key][0][1][0] != 'A': noOfFailed+=1
+                        if testDict[key][0][1][0] != 'A': wrongTypeFound = True
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
                         elif len(resultFromClassify)==2:
@@ -522,7 +523,7 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if testDict[key][0][1][0] != 'A': noOfFailed+=1
+                        if testDict[key][0][1][0] != 'A': wrongTypeFound = True
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
                         elif len(resultFromClassify)==2:
@@ -534,7 +535,7 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if testDict[key][0][1][0] != 'P': noOfFailed+=1
+                        if testDict[key][0][1][0] != 'P': wrongTypeFound = True
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
                         elif len(resultFromClassify)==2:
@@ -544,7 +545,7 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if testDict[key][0][1][0] != 'P': noOfFailed+=1
+                        if testDict[key][0][1][0] != 'P': wrongTypeFound = True
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
                         elif len(resultFromClassify)==2:
@@ -554,7 +555,7 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if testDict[key][0][1][0] != 'P': noOfFailed+=1
+                        if testDict[key][0][1][0] != 'P': wrongTypeFound = True
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
                         elif len(resultFromClassify)==2:
@@ -566,7 +567,7 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if testDict[key][0][1][0] != 'M': noOfFailed+=1
+                        if testDict[key][0][1][0] != 'M': wrongTypeFound = True
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
                         elif len(resultFromClassify)==2:
@@ -576,7 +577,7 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if testDict[key][0][1][0] != 'M': noOfFailed+=1
+                        if testDict[key][0][1][0] != 'M': wrongTypeFound = True
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
                         elif len(resultFromClassify)==2:
@@ -587,7 +588,7 @@ def suffixTrieClassify():
                     if resultFromClassify[0]:
                         found = True
                     else:
-                        if testDict[key][0][1][0] != 'M': noOfFailed+=1
+                        if testDict[key][0][1][0] != 'M': wrongTypeFound = True
                         if len(resultFromClassify)==3:
                             halfFalse = resultFromClassify[1] + resultFromClassify[2]
                         elif len(resultFromClassify)==2:
@@ -596,6 +597,7 @@ def suffixTrieClassify():
 
         if found: pogodija+=1
         else:
+            if wrongTypeFound: noOfFailed+=1
             falija+=1
             if halfFalse:
                 confusionMatrix(halfFalse)
@@ -639,11 +641,13 @@ def maxentClassify():
     wholeTrain = noun + adjective + verb + pronoun + numeral
     random.shuffle(wholeTrain)
     trainingSet=[(featuresForMaxent(word), typeOf) for(word, typeOf) in wholeTrain]
+    testLen=len(testDict)
+    print("Train lenght: ", trainingSet)
+    print("Test lenght: ", testLen)
     #devTestSet= len(trainingSet)*0.3
     print("start train")
     classifierMaxE=nltk.MaxentClassifier.train(trainingSet)
     print("finished")
-    testLen=len(testDict)
     for key in testDict: # prolazimo kroz svaki prikaz i uzmemo oblik(token=lemma) za testiranje
         testWord = testDict[key][0][0] #oblik koji nije nužno jednak lemmi
         msd = testDict[key][0][1][0]
@@ -792,15 +796,15 @@ def maxentClassify():
 dot = Digraph()
 dot.node('0', 'ROOT')
 dot.format = 'svg'
-trainsize = 0.95
+trainsize = 0.5
 separate(trainsize)
-# t=time.time()
-# suffixTrieClassify()
-# print(time.time()-t)
-k=time.time()
-print("MAXENT")
-maxentClassify()
-print(time.time()-k)
+t=time.time()
+suffixTrieClassify()
+print(time.time()-t)
+# k=time.time()
+# print("MAXENT")
+# maxentClassify()
+# print(time.time()-k)
 
 x='\t\tACTUAL\n\t  _____________________________\n\t\t N        V        A        P        M\n'
 x+='\tP|\n\tR| N     '+str(noun)+'        '+str(verbSaidNoun)+'        '+str(adjSaidNoun)+'        '+str(pronSaidNoun)+'        '+str(numSaidNoun)
