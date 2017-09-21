@@ -25,20 +25,6 @@ class HmlDB(object):
         """
         self.cur.execute('SELECT COUNT( DISTINCT token) AS token_count FROM words')
         return self.cur.fetchone()[0]
-
-    def count_lemmas(self, msd):
-        """
-        Returns count of distinct lemmas
-        """
-        self.cur.execute('SELECT COUNT(DISTINCT lemma) AS lemma_count FROM words where msd like ?',(msd, ))
-        result = self.cur.fetchone()[0]
-        return result
-    def count_lemmasAndTokens(self):
-        """
-        Returns count of distinct lemmas
-        """
-        self.cur.execute('SELECT COUNT(*) FROM (SELECT DISTINCT lemma,token FROM words) AS lemmaToken_count')
-        return self.cur.fetchone()[0]
     def count_tokens_by_msd(self, msd):
         """
         Returns count of distinct lemmas

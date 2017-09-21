@@ -114,11 +114,11 @@ def separate(trainsize):
     allItems = HmlDB.select_all(db) # get all triples from db
     random.seed(seed)
     random.shuffle(allItems)
-    nouns_count=HmlDB.count_lemmas(db,"N%")
-    adj_count=HmlDB.count_lemmas(db,"A%")
-    verb_count=HmlDB.count_lemmas(db,"V%")
-    pron_count=HmlDB.count_lemmas(db,"P%")
-    num_count=HmlDB.count_lemmas(db,"M%")
+    nouns_count=HmlDB.count_tokens_by_msd(db,"N%")
+    adj_count=HmlDB.count_tokens_by_msd(db,"A%")
+    verb_count=HmlDB.count_tokens_by_msd(db,"V%")
+    pron_count=HmlDB.count_tokens_by_msd(db,"P%")
+    num_count=HmlDB.count_tokens_by_msd(db,"M%")
     for item in allItems:
         if not item[0] in triple:
             triple[item[0]] = [[item[1],item[2]]] # add lemma as key, other as value
@@ -142,64 +142,68 @@ def separate(trainsize):
                 if not lemma in numeral: numeral[lemma] = [(j[0],j[1])]
                 else: numeral[lemma] += [(j[0],j[1])]
     for key in noun:
-        br+=1
-        for j in noun[key]:
-            if br>(nouns_count*trainsize):
+        if br>(nouns_count*trainsize):
+            for j in noun[key]:
                 if not key in test: test[key] = [(j[0],j[1])]
                 else: test[key] += [(j[0],j[1])]
-            else:
+        else:
+            for j in noun[key]:
+                br+=1
                 if not key in noun_train: noun_train[key] = [(j[0],j[1])]
                 else: noun_train[key] += [(j[0],j[1])]
                 nounListForMaxent+=[(j[0],j[1][0])]
 
     br = 0
     for key in adjective:
-        br+=1
-        for j in adjective[key]:
-            if br>(adj_count*trainsize):
+        if br>(adj_count*trainsize):
+            for j in adjective[key]:
                 if not key in test: test[key] = [(j[0],j[1])]
                 else: test[key] += [(j[0],j[1])]
-            else:
+        else:
+            for j in adjective[key]:
+                br+=1
                 if not key in adjective_train: adjective_train[key] = [(j[0],j[1])]
                 else: adjective_train[key] += [(j[0],j[1])]
                 adjectiveListForMaxent+=[(j[0],j[1][0])]
 
     br = 0
     for key in verb:
-        br+=1
-        for j in verb[key]:
-            if br>(verb_count*trainsize):
+        if br>(verb_count*trainsize):
+            for j in verb[key]:
                 if not key in test: test[key] = [(j[0],j[1])]
                 else: test[key] += [(j[0],j[1])]
-            else:
+        else:
+            for j in verb[key]:
+                br+=1
                 if not key in verb_train: verb_train[key] = [(j[0],j[1])]
                 else: verb_train[key] += [(j[0],j[1])]
                 verbListForMaxent+=[(j[0],j[1][0])]
 
     br = 0
     for key in pronoun:
-        br+=1
-        for j in pronoun[key]:
-            if br>(pron_count*trainsize):
+        if br>(pron_count*trainsize):
+            for j in pronoun[key]:
                 if not key in test: test[key] = [(j[0],j[1])]
                 else: test[key] += [(j[0],j[1])]
-            else:
+        else:
+            for j in pronoun[key]:
+                br+=1
                 if not key in pronoun_train: pronoun_train[key] = [(j[0],j[1])]
                 else: pronoun_train[key] += [(j[0],j[1])]
                 pronounListForMaxent+=[(j[0],j[1][0])]
 
     br = 0
     for key in numeral:
-        br+=1
-        for j in numeral[key]:
-            if br>(num_count*trainsize):
+        if br>(num_count*trainsize):
+            for j in numeral[key]:
                 if not key in test: test[key] = [(j[0],j[1])]
                 else: test[key] += [(j[0],j[1])]
-            else:
+        else:
+            for j in numeral[key]:
+                br+=1
                 if not key in numeral_train: numeral_train[key] = [(j[0],j[1])]
                 else: numeral_train[key] += [(j[0],j[1])]
                 numeralListForMaxent+=[(j[0],j[1][0])]
-
     write('../test.pickle', test)  # write all to files,
     write('../trainNounTrie.pickle', put([{}], noun_train))
     write('../trainAdjectiveTrie.pickle', put([{}], adjective_train))
