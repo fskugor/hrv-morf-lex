@@ -607,12 +607,14 @@ def suffixTrieClassify():
 
 
 def featuresForMaxent(word):
-    if len(word)>10:return{'Last 6 letters':word[-6:]}
-    if len(word)==10:return{'Last 5 letters':word[-5:]}
-    if len(word)==5:return{'Last 3 letters':word[-3:]}
-    if len(word)==4:return{'First and last letter':word[0]+word[-1]}
-    if len(word)>5 and len(word)<10: return {'Last 4 letters':word[-4:]}
-    if len(word)<=3: return {'Last 2 letters':word[-2:]}
+    if word[0].istitle() and len(word)>6: return{'first letter title':word[-2:], 'Last 5 letters':word[-4:], 'last six':word[-6:], 'last five':word[-5:]}
+    if word[:3]=='naj' and len(word)>9: return{'first tree leters':word[-3:]}
+    if len(word)>12:return{'Last 4 letters':word[-4:],'last tree':word[-3:],'last six':word[-6:], 'Last four':word[-4:], 'Last 7 letters':word[-7:]}
+    if len(word)>8 and len(word)<13:return{'Last 5 letters':word[-4:],'last six':word[-6:],'last tree':word[-3:],'last five':word[-5:]}
+    if len(word)==5:return{'last tree':word[-3:],'last two':word[-2:],'sec and last two':word[1]+word[-2:]}
+    if len(word)==4:return{'last two':word[-2:], 'last tree':word[-3:],'sec and last':word[1]+word[-1]}
+    if len(word)>5 and len(word)<9: return {'Last 3 letters':word[-3:],'lastTwo':word[-2:], 'Last 4 letters':word[-4:],'first two':word[:2]+word[-2:]}
+    if len(word)<=3: return {'Last 2 letters':word[-2:], 'last letter':word[-1]}
 
 def maxentClassify():
     pogodija, falija, halfFalse, fullFalse, noOfFailed = 0, 0, '', '', 0
@@ -637,10 +639,9 @@ def maxentClassify():
     wholeTrain = noun + adjective + verb + pronoun + numeral
     random.shuffle(wholeTrain)
     trainingSet=[(featuresForMaxent(word), typeOf) for(word, typeOf) in wholeTrain]
-    devTestSet= len(trainingSet)*0.3
-    print("DevSet :",devTestSet)
+    #devTestSet= len(trainingSet)*0.3
     print("start train")
-    classifierMaxE=nltk.MaxentClassifier.train(trainingSet[:int(devTestSet)])
+    classifierMaxE=nltk.MaxentClassifier.train(trainingSet)
     print("finished")
     testLen=len(testDict)
     for key in testDict: # prolazimo kroz svaki prikaz i uzmemo oblik(token=lemma) za testiranje
@@ -791,7 +792,7 @@ def maxentClassify():
 dot = Digraph()
 dot.node('0', 'ROOT')
 dot.format = 'svg'
-trainsize = 0.9
+trainsize = 0.95
 separate(trainsize)
 # t=time.time()
 # suffixTrieClassify()
