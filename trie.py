@@ -662,15 +662,15 @@ def maxentClassify():
 dot = Digraph()
 dot.node('0', 'ROOT')
 dot.format = 'svg'
-trainsize = 0.9
+trainsize = 0.8
 separate(trainsize)
-t=time.time()
-suffixTrieClassify()
-print(time.time()-t)
-# k=time.time()
-# print("MAXENT")
-# maxentClassify()
-# print(time.time()-k)
+# t=time.time()
+# suffixTrieClassify()
+# print(time.time()-t)
+k=time.time()
+print("MAXENT")
+maxentClassify()
+print(time.time()-k)
 
 x='\t\tACTUAL\n\t  _____________________________\n\t\t N        V        A        P        M\n'
 x+='\tP|\n\tR| N     '+str(noun_)+'        '+str(verbSaidNoun)+'        '+str(adjSaidNoun)+'        '+str(pronSaidNoun)+'        '+str(numSaidNoun)
