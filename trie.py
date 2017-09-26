@@ -395,14 +395,13 @@ def suffixTrieClassify():
     lenTest=len(testDict)
     print("Test length: ",lenTest)
     for key in testDict: # prolazimo kroz svaki prikaz i uzmemo oblik(token=lemma) za testiranje
-        #words=[]
+        words=set()
         msd = testDict[key][0][1][0]
         for pair in testDict[key]:
-            #     words.append(pair[0])
-            # random.shuffle(words)
+            words.add(pair[0])
+            #  random.shuffle(words)
             # testWord=words[0]
-            testWord = pair[0]
-
+        for testWord in words:
             nounResultFromSearchTrie, adjResultFromSearchTrie, pronResultFromSearchTrie = '', '', ''
             verbResultFromSearchTrie, numResultFromSearchTrie = '', ''
             nounTrieLongestSuffix = searchLongestSuffix(nounTrainTrie, testWord)
@@ -558,14 +557,13 @@ def maxentClassify():
     classifierMaxE=nltk.MaxentClassifier.train(trainingSet)
     print("finished")
     for key in testDict: # prolazimo kroz svaki prikaz i uzmemo oblik(token=lemma) za testiranje
-        #words = []
+        words = set()
         msd = testDict[key][0][1][0]
         for pair in testDict[key]:
-        #     words.append(pair[0])
-        # random.shuffle(words)
+            words.add(pair[0])
+        #random.shuffle(words)
         #testWord=words[0]
-            testWord = pair[0]
-
+        for testWord in words:
             found  = False
             msdFromClassifier = classifierMaxE.classify(featuresForMaxent(testWord))
             if msd=='N' and msdFromClassifier==msd:
@@ -662,15 +660,15 @@ def maxentClassify():
 dot = Digraph()
 dot.node('0', 'ROOT')
 dot.format = 'svg'
-trainsize = 0.8
+trainsize = 0.9
 separate(trainsize)
-# t=time.time()
-# suffixTrieClassify()
-# print(time.time()-t)
-k=time.time()
-print("MAXENT")
-maxentClassify()
-print(time.time()-k)
+t=time.time()
+suffixTrieClassify()
+print(time.time()-t)
+# k=time.time()
+# print("MAXENT")
+# maxentClassify()
+# print(time.time()-k)
 
 x='\t\tACTUAL\n\t  _____________________________\n\t\t N        V        A        P        M\n'
 x+='\tP|\n\tR| N     '+str(noun_)+'        '+str(verbSaidNoun)+'        '+str(adjSaidNoun)+'        '+str(pronSaidNoun)+'        '+str(numSaidNoun)
