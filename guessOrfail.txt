@@ -1,1 +1,1 @@
-"pogodija sve: 12708\nfalija tip/oblik: 11032\nFalija tip: 3144"
+"pogodija sve: 34078\n falija sve(ukljucujuci tip): 5654\nOOV:0"
