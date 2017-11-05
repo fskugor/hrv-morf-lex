@@ -416,8 +416,8 @@ def suffixTrieClassify():
         msd = testDict[key][0][1][0]
         for pair in testDict[key]:
             words.add(pair[0])
-            #  random.shuffle(words)
-            # testWord=words[0]
+        random.shuffle(words)
+        testWord=words[0]
         for testWord in words:
             nounResultFromSearchTrie, adjResultFromSearchTrie, pronResultFromSearchTrie = '', '', ''
             verbResultFromSearchTrie, numResultFromSearchTrie = '', ''
@@ -468,7 +468,7 @@ def suffixTrieClassify():
                 else:
                     confusionMatrix(msd+pair[0])
                     falija+=1
-                    #if found: break
+            if found: break
             else:
                 unknown+=1
 
@@ -525,15 +525,14 @@ def maxentClassify():
         msd = testDict[key][0][1][0]
         for pair in testDict[key]:
             words.add(pair[0])
-        #random.shuffle(words)
-        #testWord=words[0]
+        random.shuffle(words)
+        testWord=words[0]
         for testWord in words:
-            #found  = False
+            found  = False
             msdFromClassifier = classifierMaxE.classify(featuresForMaxent(testWord))
             if msd=='N' and msdFromClassifier==msd:
                 noun_+=1
                 pogodija+=1
-<<<<<<< HEAD
                 found = generateForms(nounTrainTrie, testWord, noun_train, testDict[key])
             elif msd=='V' and msdFromClassifier==msd:
                 ver_+=1
@@ -551,85 +550,6 @@ def maxentClassify():
                 pron_+=1
                 pogodija+=1
                 found = generateForms(pronounTrainTrie, testWord, pronoun_train, testDict[key])
-=======
-                # nounResultFromSearchTrie = search(nounTrainTrie, testWord)
-                # if nounResultFromSearchTrie[1]:
-                #     resultFromClassify = classifySubword(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
-                #     if resultFromClassify:
-                #         found = True
-                # elif nounResultFromSearchTrie[2]: #True if superword, else suffix
-                #     resultFromClassify = classifySuperword(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
-                #     if resultFromClassify:
-                #         found = True
-                # else:
-                #     resultFromClassify = classifySuffix(nounResultFromSearchTrie[0], noun_train, testWord, testDict[key])
-                #     if resultFromClassify:
-                #         found = True
-            elif msd=='V' and msdFromClassifier==msd:
-                ver_+=1
-                pogodija+=1
-                # verbResultFromSearchTrie = search(verbTrainTrie, testWord)
-                # if verbResultFromSearchTrie[1] and not found:
-                #     resultFromClassify = classifySubword(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
-                #     if resultFromClassify:
-                #         found = True
-                # elif verbResultFromSearchTrie[2] and not found:
-                #     resultFromClassify = classifySuperword(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
-                #     if resultFromClassify:
-                #         found = True
-                # elif not found:
-                #     resultFromClassify = classifySuffix(verbResultFromSearchTrie[0], verb_train, testWord, testDict[key])
-                #     if resultFromClassify:
-                #         found = True
-            elif msd=='A' and msdFromClassifier==msd:
-                adj_+=1
-                pogodija+=1
-                # adjResultFromSearchTrie = search(adjectiveTrainTrie, testWord)
-                # if adjResultFromSearchTrie[1] and not found:
-                #     resultFromClassify = classifySubword(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
-                #     if resultFromClassify:
-                #         found = True
-                # elif adjResultFromSearchTrie[2] and not found:
-                #     resultFromClassify = classifySuperword(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
-                #     if resultFromClassify:
-                #         found = True
-                # elif not found:
-                #     resultFromClassify = classifySuffix(adjResultFromSearchTrie[0], adjective_train, testWord, testDict[key])
-                #     if resultFromClassify:
-                #         found = True
-            elif msd=='M' and msdFromClassifier==msd:
-                num_+=1
-                pogodija+=1
-                # numResultFromSearchTrie = search(numeralTrainTrie, testWord)
-                # if numResultFromSearchTrie[1] and not found:
-                #     resultFromClassify = classifySubword(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
-                #     if resultFromClassify:
-                #         found = True
-                # elif numResultFromSearchTrie[2] and not found:
-                #     resultFromClassify = classifySuperword(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
-                #     if resultFromClassify:
-                #         found = True
-                # elif not found:
-                #     resultFromClassify = classifySuffix(numResultFromSearchTrie[0], numeral_train, testWord, testDict[key])
-                #     if resultFromClassify:
-                #         found = True
-            elif msd=='P' and msdFromClassifier==msd:
-                pron_+=1
-                pogodija+=1
-                # pronResultFromSearchTrie = search(pronounTrainTrie, testWord)
-                # if pronResultFromSearchTrie[1] and not found:
-                #     resultFromClassify = classifySubword(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
-                #     if resultFromClassify:
-                #         found = True
-                # elif pronResultFromSearchTrie[2] and not found:
-                #     resultFromClassify = classifySuperword(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
-                #     if resultFromClassify:
-                #         found = True
-                # elif not found:
-                #     resultFromClassify = classifySuffix(pronResultFromSearchTrie[0], pronoun_train, testWord, testDict[key])
-                #     if resultFromClassify:
-                #         found = True
->>>>>>> 710f092a838ae84fbbc0b67ff20f41586f9ca064
             else:
                 failedType+=1
                 confusionMatrix(msd + msdFromClassifier)
