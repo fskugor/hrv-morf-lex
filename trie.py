@@ -39,10 +39,7 @@ def put(trie, words): #this function creates trie from list of words
                     current[word[j]][1] += 1
                 else:
                     id = id+1
-                if j == 0:
-                    current = current.setdefault(word[j], [{},1, j == 0, id, j == (len(word)-1)])[0]#key is letter,
-                else:
-                    current = current.setdefault(word[j], [{},1, j == 0, id, j == (len(word)-1)])[0]
+                current = current.setdefault(word[j], [{},1, j == 0, id, j == (len(word)-1)])[0]
     return trie # values are empty dict(for storing next letter of word), number of other words containing that
                 # node(letter), info if the node is first letter of word, id for visualization, if it's last letter(used for visualization)
 def searchSuperWord(trie,suffix):
@@ -478,12 +475,14 @@ def suffixTrieClassify():
 
 
 def featuresForMaxent(word):
-    if len(word)>10:return{'First and last letter':word[-6:]}
-    if len(word)==10:return{'First and last letter':word[-5:]}
-    if len(word)==5:return{'First and last letter':word[-3:]}
-    if len(word)==4:return{'First and last letter':word[0]+word[-1]}
-    if len(word)>5 and len(word)<10: return {'Last 3 letters':word[-4:]}
-    if len(word)<=3: return {'Last 2 letters':word[-2:]}
+    if word[0].istitle() and len(word)>6: return{'first letter title':word[-2:], 'Last 5 letters':word[-4:], 'last tree':word[-3:]}
+    if word[:3]=='naj' and len(word)>9: return{'first tree leters':word[-3:]}
+    if len(word)>12:return{'Last 4 letters':word[-4:],'last tree':word[-3:],'last six':word[-6:], 'Last four':word[-4:], 'Last 7 letters':word[-5:]}
+    if len(word)>8 and len(word)<13:return{'Last 5 letters':word[-4:],'last six':word[-6:],'last tree':word[-3:],'last five':word[-5:]}
+    if len(word)==5:return{'last tree':word[-3:],'last two':word[-2:],'sec and last two':word[1]+word[-2:]}
+    if len(word)==4:return{'last two':word[-2:], 'last tree':word[-3:],'sec and last':word[1]+word[-1]}
+    if len(word)>5 and len(word)<9: return {'Last 3 letters':word[-3:],'lastTwo':word[-2:], 'Last 4 letters':word[-4:],'first two':word[:2]+word[-2:]}
+    if len(word)<=3: return {'Last 2 letters':word[-2:], 'last letter':word[-1]}
 
 
 def maxentClassify():
@@ -522,44 +521,44 @@ def maxentClassify():
         msd = testDict[key][0][1][0]
         for pair in testDict[key]:
             testWord=pair[0]
-            found  = False
+            # found  = False
             msdFromClassifier = classifierMaxE.classify(featuresForMaxent(testWord))
             if msd=='N' and msdFromClassifier==msd:
                 noun_+=1
                 pogodija+=1
-                found = generateForms(nounTrainTrie, testWord, noun_train, testDict[key])
+                # found = generateForms(nounTrainTrie, testWord, noun_train, testDict[key])
             elif msd=='V' and msdFromClassifier==msd:
                 ver_+=1
                 pogodija+=1
-                found = generateForms(verbTrainTrie, testWord, verb_train, testDict[key])
+                # found = generateForms(verbTrainTrie, testWord, verb_train, testDict[key])
             elif msd=='A' and msdFromClassifier==msd:
                 adj_+=1
                 pogodija+=1
-                found = generateForms(adjectiveTrainTrie, testWord, adjective_train, testDict[key])
+                # found = generateForms(adjectiveTrainTrie, testWord, adjective_train, testDict[key])
             elif msd=='M' and msdFromClassifier==msd:
                 num_+=1
                 pogodija+=1
-                found = generateForms(numeralTrainTrie, testWord, numeral_train, testDict[key])
+                # found = generateForms(numeralTrainTrie, testWord, numeral_train, testDict[key])
             elif msd=='P' and msdFromClassifier==msd:
                 pron_+=1
                 pogodija+=1
-                found = generateForms(pronounTrainTrie, testWord, pronoun_train, testDict[key])
+                # found = generateForms(pronounTrainTrie, testWord, pronoun_train, testDict[key])
             else:
                 failedType+=1
                 confusionMatrix(msd + msdFromClassifier)
             if msdFromClassifier!='N' and msdFromClassifier !='A' and msdFromClassifier !='P' and msdFromClassifier !='M' and msdFromClassifier !='V':
                 unknown+=1
                 print(testWord, msdFromClassifier)
-            if found: break
+            # if found: break
 
-        k='pogodija tip: '+str(pogodija)+ '\nfalija klasificirat tip: '+str(failedType)+'\nOOV: '+str(unknown)
-        with open('guessOrfailMaxEnt.txt', 'w') as outfile:
-            json.dump(k, outfile)
+    k='pogodija tip: '+str(pogodija)+ '\nfalija klasificirat tip: '+str(failedType)+'\nOOV: '+str(unknown)
+    with open('guessOrfailMaxEnt.txt', 'w') as outfile:
+        json.dump(k, outfile)
 
 dot = Digraph()
 dot.node('0', 'ROOT')
 dot.format = 'svg'
-trainsize = 0.8
+trainsize = 0.9
 separate(trainsize)
 # t=time.time()
 # suffixTrieClassify()
